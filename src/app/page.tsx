@@ -33,11 +33,7 @@ export default function Home() {
         {/* Stats panel */}
         <StatsPanel
           active={bubbleActive}
-          onActivate={() => {
-            const next = !bubbleActive;
-            setBubbleActive(next);
-            if (!next) setActivePartners(new Set());
-          }}
+          onActivate={() => setBubbleActive(!bubbleActive)}
           activePartners={activePartners}
           onTogglePartner={togglePartner}
         />

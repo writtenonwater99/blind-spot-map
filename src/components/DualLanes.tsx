@@ -772,12 +772,14 @@ export default function DualLanes({ active, activePartners }: Props) {
       {/* ============ BOTTOM LANE: ZKELETON PRIVATE BUBBLE ============ */}
       <div className="w-full max-w-[800px] relative">
         {/* Floating partner icons — docked outside right edge */}
-        {active && activePartners.size > 0 && (
-          <div className="absolute -right-10 top-1/2 -translate-y-1/2 flex flex-col gap-2.5 z-10">
+        {activePartners.size > 0 && (
+          <div className={`absolute -right-10 top-1/2 -translate-y-1/2 flex flex-col gap-2.5 z-10 transition-all duration-700 ${
+            active && !transitioning ? "opacity-100 scale-100" : "opacity-0 scale-95"
+          }`}>
             {PARTNERS.filter((p) => activePartners.has(p.key)).map((p) => (
               <div
                 key={p.key}
-                className="w-7 h-7 rounded-full bg-zkeleton-panel border border-zkeleton-teal/30 flex items-center justify-center shadow-[0_0_8px_rgba(45,212,170,0.15)] animate-fadeIn"
+                className="w-7 h-7 rounded-full bg-zkeleton-panel border border-zkeleton-teal/30 flex items-center justify-center shadow-[0_0_8px_rgba(45,212,170,0.15)]"
                 title={p.name}
               >
                 <span className="text-zkeleton-teal">{PARTNER_ICONS[p.key]}</span>

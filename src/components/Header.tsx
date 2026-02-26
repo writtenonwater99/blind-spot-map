@@ -42,7 +42,9 @@ export default function Header() {
           The Blind Spot Map
         </h1>
 
-        <span className="text-[8px] tracking-[0.15em] uppercase text-gray-600 border border-gray-700/50 rounded px-1.5 py-0.5 bg-gray-800/30">
+        <div className="h-4 w-px bg-zkeleton-border" />
+
+        <span className="text-sm text-gray-400 tracking-wide uppercase">
           Internal &middot; Confidential
         </span>
       </div>
