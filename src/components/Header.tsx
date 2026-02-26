@@ -41,6 +41,10 @@ export default function Header() {
         <h1 className="text-sm text-gray-400 tracking-wide uppercase">
           The Blind Spot Map
         </h1>
+
+        <span className="text-[8px] tracking-[0.15em] uppercase text-gray-600 border border-gray-700/50 rounded px-1.5 py-0.5 bg-gray-800/30">
+          Internal &middot; Confidential
+        </span>
       </div>
 
       <div className="flex items-center gap-3 text-xs text-zkeleton-muted">

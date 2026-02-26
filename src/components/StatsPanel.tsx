@@ -11,7 +11,54 @@ import {
 interface Props {
   active: boolean;
   onActivate: () => void;
+  activePartners: Set<string>;
+  onTogglePartner: (key: string) => void;
 }
+
+const PARTNER_TILES = [
+  {
+    key: "cgm",
+    label: "Wearable / CGM",
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+        <path d="M3 12h4l3-9 4 18 3-9h4" />
+      </svg>
+    ),
+  },
+  {
+    key: "pharmacy",
+    label: "Pharmacy / PBM",
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+        <path d="M9 3h6v4H9z" />
+        <path d="M6 7h12v14H6z" />
+        <path d="M12 11v6M9 14h6" />
+      </svg>
+    ),
+  },
+  {
+    key: "rpm",
+    label: "Remote Monitoring",
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+        <rect x="2" y="3" width="20" height="14" rx="2" />
+        <path d="M8 21h8M12 17v4" />
+        <path d="M7 10h2l2-3 2 6 2-3h2" />
+      </svg>
+    ),
+  },
+  {
+    key: "sdoh",
+    label: "Social Determinants",
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+        <path d="M3 12l9-9 9 9" />
+        <path d="M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+        <path d="M9 21v-6h6v6" />
+      </svg>
+    ),
+  },
+];
 
 function AnimNum({
   value,
@@ -38,7 +85,9 @@ function AnimNum({
   return <>${display.toLocaleString()}</>;
 }
 
-export default function StatsPanel({ active, onActivate }: Props) {
+export default function StatsPanel({ active, onActivate, activePartners, onTogglePartner }: Props) {
+  const hasPartners = activePartners.size > 0;
+
   return (
     <aside className="w-[380px] border-l border-zkeleton-border bg-zkeleton-panel flex flex-col overflow-y-auto">
       {/* Hero stat */}
@@ -155,6 +204,120 @@ export default function StatsPanel({ active, onActivate }: Props) {
         </button>
       </div>
 
+      {/* ============ PARTNER ECOSYSTEM GRID ============ */}
+      {active && (
+        <div className="p-6 border-b border-zkeleton-border animate-fadeIn">
+          <h3 className="text-[10px] text-zkeleton-teal tracking-[0.2em] uppercase mb-1">
+            Bubble Ecosystem
+          </h3>
+          <p className="text-[9px] text-gray-600 mb-4">
+            The insurer is the landlord. Partners are tenants.
+          </p>
+
+          <div className="grid grid-cols-2 gap-2.5">
+            {PARTNER_TILES.map((p) => {
+              const isActive = activePartners.has(p.key);
+              return (
+                <button
+                  key={p.key}
+                  onClick={() => onTogglePartner(p.key)}
+                  className={`flex flex-col items-center gap-2 py-3 px-2 rounded-lg text-center transition-all duration-300 cursor-pointer ${
+                    isActive
+                      ? "bg-zkeleton-teal/10 border border-zkeleton-teal/30 shadow-[0_0_12px_rgba(45,212,170,0.08)]"
+                      : "bg-white/[0.01] border border-dashed border-gray-700/60 hover:border-gray-500 hover:bg-white/[0.02]"
+                  }`}
+                >
+                  <span
+                    className={`transition-colors ${
+                      isActive ? "text-zkeleton-teal" : "text-gray-600"
+                    }`}
+                  >
+                    {p.icon}
+                  </span>
+                  <span
+                    className={`text-[9px] tracking-wider uppercase font-medium leading-tight ${
+                      isActive ? "text-zkeleton-teal" : "text-gray-500"
+                    }`}
+                  >
+                    {p.label}
+                  </span>
+                  {isActive && (
+                    <span className="w-1 h-1 rounded-full bg-zkeleton-teal animate-pulse" />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          {!hasPartners && (
+            <p className="text-[9px] text-gray-600 text-center mt-3">
+              Invite partners to enrich every claim in the bubble
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* ============ VALUE EXCHANGE — appears when any partner is active ============ */}
+      {active && hasPartners && (
+        <div className="p-6 border-b border-zkeleton-border animate-fadeIn">
+          <h3 className="text-[10px] text-zkeleton-teal tracking-[0.2em] uppercase mb-4">
+            Value Exchange
+          </h3>
+
+          {/* What the insurer gets */}
+          <div className="mb-4">
+            <div className="flex items-center gap-1.5 mb-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-400" />
+              <span className="text-[9px] text-green-400 tracking-wider uppercase font-medium">
+                Insurer Gets
+              </span>
+            </div>
+            <div className="space-y-1.5 pl-3">
+              <p className="text-[10px] text-gray-300 leading-relaxed">
+                Device &amp; partner data enriching every claim
+              </p>
+              <p className="text-[10px] text-gray-300 leading-relaxed">
+                Population health intelligence at scale
+              </p>
+              <p className="text-[10px] text-gray-300 leading-relaxed">
+                Real-world evidence for risk adjustment
+              </p>
+            </div>
+          </div>
+
+          {/* What the partner gets */}
+          <div className="mb-4">
+            <div className="flex items-center gap-1.5 mb-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-zkeleton-teal" />
+              <span className="text-[9px] text-zkeleton-teal tracking-wider uppercase font-medium">
+                Partner Gets
+              </span>
+            </div>
+            <div className="space-y-1.5 pl-3">
+              <p className="text-[10px] text-gray-300 leading-relaxed">
+                Clinical context they never had access to
+              </p>
+              <p className="text-[10px] text-gray-300 leading-relaxed">
+                Outcome correlation — does their product work?
+              </p>
+              <p className="text-[10px] text-gray-300 leading-relaxed">
+                Patient identification without buying data
+              </p>
+            </div>
+          </div>
+
+          {/* The rule */}
+          <div className="rounded border border-zkeleton-teal/15 bg-zkeleton-teal/[0.03] px-3 py-2.5">
+            <p className="text-[10px] text-gray-400 leading-relaxed">
+              No data leaves the bubble. No data is sold.
+            </p>
+            <p className="text-[11px] text-zkeleton-teal font-medium mt-1">
+              The insurer doesn't sell data. They sell seats at the table.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Inside the Bubble — appears when active */}
       {active && (
         <div className="px-6 py-4 border-b border-zkeleton-border animate-fadeIn">
@@ -186,6 +349,22 @@ export default function StatsPanel({ active, onActivate }: Props) {
                 Improper payments surfacing in real-time
               </span>
             </div>
+            {hasPartners && (
+              <div className="mt-1 pt-2 border-t border-zkeleton-border/50 space-y-2.5">
+                <div className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-zkeleton-teal" />
+                  <span className="text-gray-300">
+                    {activePartners.size} partner{activePartners.size > 1 ? "s" : ""} inside the bubble
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-zkeleton-teal" />
+                  <span className="text-gray-300">
+                    Partner data enriching clinical context
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
