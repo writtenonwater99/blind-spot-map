@@ -95,7 +95,7 @@ const SCENARIOS: ClaimScenario[] = [
       ],
       sdoh: [
         { label: "Home", value: "Lives alone, limited mobility" },
-        { label: "Dist", value: "Nearest hospital: 22 min drive" },
+        { label: "Area", value: "Rural zip — limited specialist access" },
       ],
     },
   },
@@ -136,15 +136,15 @@ const SCENARIOS: ClaimScenario[] = [
       ],
       pharmacy: [
         { label: "Rx", value: "No prescription filled" },
-        { label: "OTC", value: "OTC cold medicine purchased" },
+        { label: "Flag", value: "No Rx filled for this encounter" },
       ],
       rpm: [
         { label: "Mon", value: "No active monitoring enrolled" },
         { label: "Flag", value: "Patient not in RPM program" },
       ],
       sdoh: [
-        { label: "PCP", value: "Primary care: 0.3 mi from home" },
-        { label: "Ins", value: "Walk-in clinic available nearby" },
+        { label: "Area", value: "Urban — high provider density" },
+        { label: "Ins", value: "Low acuity area — urgent care in network" },
       ],
     },
   },
@@ -196,7 +196,7 @@ const SCENARIOS: ClaimScenario[] = [
       ],
       sdoh: [
         { label: "Care", value: "Spouse present as caregiver" },
-        { label: "Rehab", value: "Cardiac rehab: 8 min drive" },
+        { label: "Rehab", value: "Cardiac rehab facility in network" },
       ],
     },
   },
@@ -232,7 +232,7 @@ const SCENARIOS: ClaimScenario[] = [
     ],
     partnerData: {
       cgm: [
-        { label: "GPS", value: "Device location: patient home all day" },
+        { label: "CGM", value: "No glucose readings from facility on DOS" },
         { label: "Steps", value: "4,200 steps logged on 9/11" },
       ],
       pharmacy: [
@@ -297,8 +297,8 @@ const SCENARIOS: ClaimScenario[] = [
         { label: "Trend", value: "Fasting glucose trending up 14d" },
       ],
       sdoh: [
-        { label: "Food", value: "Food desert zip code" },
-        { label: "Dist", value: "Nearest pharmacy: 3.2 mi" },
+        { label: "Food", value: "SDOH screening: food insecurity flagged" },
+        { label: "Rx", value: "Pharmacy access: limited options in zip" },
       ],
     },
     partnerFlip: {
@@ -400,8 +400,8 @@ const SCENARIOS: ClaimScenario[] = [
     ],
     partnerData: {
       cgm: [
-        { label: "GPS", value: "Device at patient home during visit" },
-        { label: "HRV", value: "No stress/anxiety markers detected" },
+        { label: "HR", value: "Resting HR steady, no spike during visit window" },
+        { label: "HRV", value: "HRV normal — no stress response detected" },
       ],
       pharmacy: [
         { label: "Rx", value: "Sertraline 90-day auto-refill" },
