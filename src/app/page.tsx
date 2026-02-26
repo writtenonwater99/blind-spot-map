@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import Header from "@/components/Header";
+import BottomBar from "@/components/BottomBar";
 import DualLanes from "@/components/DualLanes";
 import StatsPanel from "@/components/StatsPanel";
-import BottomBar from "@/components/BottomBar";
 
 export default function Home() {
   const [bubbleActive, setBubbleActive] = useState(false);
@@ -12,6 +12,7 @@ export default function Home() {
   return (
     <div className="h-screen w-screen flex flex-col bg-zkeleton-dark overflow-hidden">
       <Header />
+      <BottomBar />
 
       <div className="flex-1 flex min-h-0">
         {/* Main visualization area */}
@@ -25,8 +26,6 @@ export default function Home() {
           onActivate={() => setBubbleActive(!bubbleActive)}
         />
       </div>
-
-      <BottomBar />
     </div>
   );
 }
