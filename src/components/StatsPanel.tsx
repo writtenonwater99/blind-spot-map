@@ -10,7 +10,10 @@ import {
 
 interface Props {
   active: boolean;
+  paused: boolean;
   onActivate: () => void;
+  onDeactivate: () => void;
+  onTogglePause: () => void;
   activePartners: Set<string>;
   onTogglePartner: (key: string) => void;
 }
@@ -60,6 +63,23 @@ const PARTNER_TILES = [
   },
 ];
 
+// CMS-0057 deadline
+const CMS_DEADLINE = new Date("2027-01-01T00:00:00");
+
+function useDaysUntil(target: Date) {
+  const [days, setDays] = useState(() =>
+    Math.ceil((target.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+  );
+  useEffect(() => {
+    const id = setInterval(
+      () => setDays(Math.ceil((target.getTime() - Date.now()) / (1000 * 60 * 60 * 24))),
+      60000
+    );
+    return () => clearInterval(id);
+  }, [target]);
+  return days;
+}
+
 function AnimNum({
   value,
   duration = 1400,
@@ -85,8 +105,17 @@ function AnimNum({
   return <>${display.toLocaleString()}</>;
 }
 
-export default function StatsPanel({ active, onActivate, activePartners, onTogglePartner }: Props) {
+export default function StatsPanel({
+  active,
+  paused,
+  onActivate,
+  onDeactivate,
+  onTogglePause,
+  activePartners,
+  onTogglePartner,
+}: Props) {
   const hasPartners = activePartners.size > 0;
+  const daysLeft = useDaysUntil(CMS_DEADLINE);
 
   return (
     <aside className="w-[380px] border-l border-zkeleton-border bg-zkeleton-panel flex flex-col overflow-y-auto">
@@ -103,24 +132,6 @@ export default function StatsPanel({ active, onActivate, activePartners, onToggl
           <br />
           No diagnosis confirmed. No treatment verified.
         </p>
-      </div>
-
-      {/* Legend */}
-      <div className="px-6 py-3 border-b border-zkeleton-border">
-        <div className="flex items-center gap-5 text-[10px]">
-          <span className="flex items-center gap-1.5">
-            <span className="w-5 h-2.5 rounded-sm bg-gray-700/60 border border-gray-600/30" />
-            <span className="text-gray-500">Blind</span>
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="w-5 h-2.5 rounded-sm bg-red-500/20 border border-red-500/40" />
-            <span className="text-red-400">Flagged</span>
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="w-5 h-2.5 rounded-sm bg-green-500/20 border border-green-500/40" />
-            <span className="text-green-400">Matched</span>
-          </span>
-        </div>
       </div>
 
       {/* Metrics */}
@@ -151,57 +162,84 @@ export default function StatsPanel({ active, onActivate, activePartners, onToggl
         />
       </div>
 
-      {/* How it works */}
+      {/* How it works / What's happening */}
       <div className="p-6 border-b border-zkeleton-border">
-        <h3 className="text-[10px] text-zkeleton-teal tracking-[0.2em] uppercase mb-4">
-          {active ? "What Just Happened" : "How It Works"}
-        </h3>
-
-        <div className="space-y-3">
-          <Step
-            n="1"
-            active={active}
-            done={active}
-            text="Claims data sits in the insurer's system — billing codes, amounts, provider IDs."
-          />
-          <Step
-            n="2"
-            active={active}
-            done={active}
-            text="Clinical data sits in hospital EHRs — doctor's notes, labs, imaging, vitals."
-          />
-          <Step
-            n="3"
-            active={active}
-            done={active}
-            text={
-              active
-                ? "Zkeleton's Private Bubble matched both datasets. Every claim linked to its medical record. Full Fidelity."
-                : "Today these never meet. 95% of claims are paid without anyone checking the chart."
-            }
-          />
-        </div>
+        {active ? (
+          <>
+            <h3 className="text-[10px] text-green-400 tracking-[0.2em] uppercase mb-3">
+              What&apos;s Happening
+            </h3>
+            <p className="text-[11px] text-gray-300 leading-relaxed">
+              Claims and clinical records matched in real-time inside the Private Bubble. Full fidelity.
+            </p>
+            {hasPartners && (
+              <p className="text-[11px] text-zkeleton-teal leading-relaxed mt-2">
+                {activePartners.size} partner{activePartners.size > 1 ? "s" : ""} enriching every claim with additional data.
+              </p>
+            )}
+          </>
+        ) : (
+          <>
+            <h3 className="text-[10px] text-zkeleton-teal tracking-[0.2em] uppercase mb-4">
+              How It Works
+            </h3>
+            <div className="space-y-3">
+              <Step
+                n="1"
+                text="Claims data sits in the insurer's system — billing codes, amounts, provider IDs."
+              />
+              <Step
+                n="2"
+                text="Clinical data sits in hospital EHRs — doctor's notes, labs, imaging, vitals."
+              />
+              <Step
+                n="3"
+                text="Today these never meet. 95% of claims are paid without anyone checking the chart."
+              />
+            </div>
+          </>
+        )}
       </div>
 
-      {/* Activate CTA */}
+      {/* Activate / Pause / Deactivate */}
       <div className="p-6 border-b border-zkeleton-border">
-        <button
-          onClick={onActivate}
-          className={`w-full py-3 rounded font-medium text-xs tracking-wider uppercase transition-all duration-500 cursor-pointer ${
-            active
-              ? "bg-green-500/10 text-green-400 border border-green-500/25 hover:bg-green-500/15"
-              : "bg-zkeleton-teal/8 text-zkeleton-teal border border-zkeleton-teal/20 hover:bg-zkeleton-teal/15 pulse-teal"
-          }`}
-        >
-          {active ? (
-            <span className="flex items-center justify-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-              Bubble Active — Analyzing Claims
-            </span>
-          ) : (
-            "\u2197 Activate Bubble"
-          )}
-        </button>
+        {!active ? (
+          <button
+            onClick={onActivate}
+            className="w-full py-3 rounded font-medium text-xs tracking-wider uppercase transition-all duration-500 cursor-pointer bg-zkeleton-teal/8 text-zkeleton-teal border border-zkeleton-teal/20 hover:bg-zkeleton-teal/15 pulse-teal"
+          >
+            {"\u2197 Activate Bubble"}
+          </button>
+        ) : (
+          <div className="space-y-2.5">
+            <button
+              onClick={onTogglePause}
+              className={`w-full py-3 rounded font-medium text-xs tracking-wider uppercase transition-all duration-500 cursor-pointer ${
+                paused
+                  ? "bg-yellow-500/8 text-yellow-500 border border-yellow-500/20 hover:bg-yellow-500/15"
+                  : "bg-green-500/10 text-green-400 border border-green-500/25 hover:bg-green-500/15"
+              }`}
+            >
+              {paused ? (
+                <span className="flex items-center justify-center gap-2">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21" /></svg>
+                  Resume
+                </span>
+              ) : (
+                <span className="flex items-center justify-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+                  Bubble Active — Analyzing
+                </span>
+              )}
+            </button>
+            <button
+              onClick={onDeactivate}
+              className="w-full py-1.5 text-[10px] text-gray-600 hover:text-gray-400 tracking-wider uppercase transition-colors cursor-pointer"
+            >
+              Deactivate Bubble
+            </button>
+          </div>
+        )}
       </div>
 
       {/* ============ PARTNER ECOSYSTEM GRID ============ */}
@@ -257,14 +295,13 @@ export default function StatsPanel({ active, onActivate, activePartners, onToggl
         </div>
       )}
 
-      {/* ============ VALUE EXCHANGE — appears when any partner is active ============ */}
+      {/* ============ VALUE EXCHANGE ============ */}
       {active && hasPartners && (
         <div className="p-6 border-b border-zkeleton-border animate-fadeIn">
           <h3 className="text-[10px] text-zkeleton-teal tracking-[0.2em] uppercase mb-4">
             Value Exchange
           </h3>
 
-          {/* What the insurer gets */}
           <div className="mb-4">
             <div className="flex items-center gap-1.5 mb-2">
               <span className="w-1.5 h-1.5 rounded-full bg-green-400" />
@@ -285,7 +322,6 @@ export default function StatsPanel({ active, onActivate, activePartners, onToggl
             </div>
           </div>
 
-          {/* What the partner gets */}
           <div className="mb-4">
             <div className="flex items-center gap-1.5 mb-2">
               <span className="w-1.5 h-1.5 rounded-full bg-zkeleton-teal" />
@@ -306,91 +342,48 @@ export default function StatsPanel({ active, onActivate, activePartners, onToggl
             </div>
           </div>
 
-          {/* The rule */}
           <div className="rounded border border-zkeleton-teal/15 bg-zkeleton-teal/[0.03] px-3 py-2.5">
             <p className="text-[10px] text-gray-400 leading-relaxed">
               No data leaves the bubble. No data is sold.
             </p>
             <p className="text-[11px] text-zkeleton-teal font-medium mt-1">
-              The insurer doesn't sell data. They sell seats at the table.
+              The insurer doesn&apos;t sell data. They sell seats at the table.
             </p>
           </div>
         </div>
       )}
 
-      {/* Inside the Bubble — appears when active */}
-      {active && (
-        <div className="px-6 py-4 border-b border-zkeleton-border animate-fadeIn">
-          <h3 className="text-[10px] text-green-400 tracking-[0.2em] uppercase mb-3">
-            Inside the Bubble
-          </h3>
-          <div className="space-y-2.5 text-[10px]">
-            <div className="flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-green-400" />
-              <span className="text-gray-300">
-                Clinical data flowing via FHIR/TEFCA
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-green-400" />
-              <span className="text-gray-300">
-                Claims matched to medical records
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-green-400" />
-              <span className="text-gray-300">
-                AI running on full-fidelity dataset
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-red-400" />
-              <span className="text-gray-300">
-                Improper payments surfacing in real-time
-              </span>
-            </div>
-            {hasPartners && (
-              <div className="mt-1 pt-2 border-t border-zkeleton-border/50 space-y-2.5">
-                <div className="flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-zkeleton-teal" />
-                  <span className="text-gray-300">
-                    {activePartners.size} partner{activePartners.size > 1 ? "s" : ""} inside the bubble
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-zkeleton-teal" />
-                  <span className="text-gray-300">
-                    Partner data enriching clinical context
-                  </span>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Bottom insight */}
+      {/* ============ CMS-0057 COUNTDOWN ============ */}
       <div className="p-6 mt-auto">
-        <div className="rounded border border-zkeleton-border bg-zkeleton-dark/60 p-5">
-          <p className="text-[11px] text-gray-400 leading-relaxed">
-            Every other company either analyzes{" "}
-            <span className="text-gray-300">billing codes</span> or pulls{" "}
-            <span className="text-gray-300">charts one at a time</span>.
-            Nobody builds the infrastructure that puts both datasets together.
+        <div className="rounded border border-zkeleton-border bg-zkeleton-dark/60 p-4">
+          <div className="flex items-baseline justify-between mb-1">
+            <span className="text-[9px] tracking-[0.15em] uppercase text-gray-500 font-medium">
+              CMS-0057 Mandate
+            </span>
+            <span className="text-[9px] text-gray-600">
+              January 1, 2027
+            </span>
+          </div>
+          <div className="text-2xl font-bold text-white tracking-tight mb-1">
+            {daysLeft} <span className="text-sm font-medium text-gray-500">days</span>
+          </div>
+          <p className="text-[10px] text-gray-500 leading-relaxed">
+            Insurers must receive and process clinical data.
           </p>
-          <p className="text-[11px] text-gray-400 leading-relaxed mt-3">
-            Everyone else grades book reports.
+          <p className="text-[10px] text-zkeleton-teal leading-relaxed mt-0.5">
+            They have no infrastructure to do it.
           </p>
-          <p className="text-[12px] text-zkeleton-teal font-medium mt-1">
-            Zkeleton gives you the book.
-          </p>
+          {/* Progress bar */}
+          <div className="h-[3px] bg-zkeleton-dark rounded-full overflow-hidden mt-3">
+            <div
+              className="h-full bg-zkeleton-teal/50 rounded-full"
+              style={{ width: `${Math.max(0, 100 - (daysLeft / 730) * 100)}%` }}
+            />
+          </div>
         </div>
 
         <div className="mt-3 text-[9px] text-gray-600 leading-relaxed">
           Source: CMS T-MSIS / KFF State Health Facts / HHS OIG.
-          <br />
-          Provider-level data: HHS-Official/medicaid-provider-spending (Hugging
-          Face).
         </div>
       </div>
     </aside>
@@ -431,31 +424,17 @@ function Metric({
 
 function Step({
   n,
-  active,
-  done,
   text,
 }: {
   n: string;
-  active: boolean;
-  done: boolean;
   text: string;
 }) {
   return (
     <div className="flex gap-3">
-      <div
-        className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0 mt-0.5 transition-all duration-500 ${
-          done
-            ? "bg-green-500/20 text-green-400 border border-green-500/30"
-            : "bg-zkeleton-dark text-gray-600 border border-zkeleton-border"
-        }`}
-      >
-        {done ? "\u2713" : n}
+      <div className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0 mt-0.5 bg-zkeleton-dark text-gray-600 border border-zkeleton-border">
+        {n}
       </div>
-      <p
-        className={`text-[11px] leading-relaxed transition-colors duration-500 ${
-          done ? "text-gray-300" : "text-gray-500"
-        }`}
-      >
+      <p className="text-[11px] leading-relaxed text-gray-500">
         {text}
       </p>
     </div>

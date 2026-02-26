@@ -474,10 +474,11 @@ const GAP_TIME = 700;
 
 interface Props {
   active: boolean;
+  paused: boolean;
   activePartners: Set<string>;
 }
 
-export default function DualLanes({ active, activePartners }: Props) {
+export default function DualLanes({ active, paused, activePartners }: Props) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [revealedLines, setRevealedLines] = useState(0);
   const [revealedPartnerLines, setRevealedPartnerLines] = useState(0);
@@ -494,8 +495,11 @@ export default function DualLanes({ active, activePartners }: Props) {
   const revealRef = useRef<NodeJS.Timeout | null>(null);
   const stampRef = useRef<NodeJS.Timeout | null>(null);
   const partnerRevealRef = useRef<NodeJS.Timeout | null>(null);
+  const pauseWaitRef = useRef<NodeJS.Timeout | null>(null);
   const activePartnersRef = useRef(activePartners);
   activePartnersRef.current = activePartners;
+  const pausedRef = useRef(paused);
+  pausedRef.current = paused;
 
   const scenario = SCENARIOS[currentIndex % SCENARIOS.length];
   const isImproper = scenario.outcome === "improper";
@@ -505,7 +509,21 @@ export default function DualLanes({ active, activePartners }: Props) {
     if (revealRef.current) clearInterval(revealRef.current);
     if (stampRef.current) clearTimeout(stampRef.current);
     if (partnerRevealRef.current) clearInterval(partnerRevealRef.current);
+    if (pauseWaitRef.current) clearInterval(pauseWaitRef.current);
   };
+
+  // Timeout that waits if paused, then executes
+  const safeTimeout = useCallback((fn: () => void, delay: number) => {
+    return setTimeout(() => {
+      if (!pausedRef.current) { fn(); return; }
+      pauseWaitRef.current = setInterval(() => {
+        if (!pausedRef.current) {
+          if (pauseWaitRef.current) clearInterval(pauseWaitRef.current);
+          fn();
+        }
+      }, 100);
+    }, delay);
+  }, []);
 
   const showVerdictAndAdvance = useCallback((sc: ClaimScenario, idx: number) => {
     setShowVerdict(true);
@@ -518,15 +536,15 @@ export default function DualLanes({ active, activePartners }: Props) {
     }
 
     // Hold verdict, then transition to next
-    timerRef.current = setTimeout(() => {
+    timerRef.current = safeTimeout(() => {
       setTransitioning(true);
-      setTimeout(() => {
+      safeTimeout(() => {
         const next = (idx + 1) % SCENARIOS.length;
         setTransitioning(false);
-        setTimeout(() => processClaim(next), GAP_TIME);
+        safeTimeout(() => processClaim(next), GAP_TIME);
       }, FADE_TIME);
     }, HOLD_TIME);
-  }, []);
+  }, [safeTimeout]);
 
   const processClaim = useCallback((idx: number) => {
     const sc = SCENARIOS[idx % SCENARIOS.length];
@@ -538,7 +556,7 @@ export default function DualLanes({ active, activePartners }: Props) {
     setTransitioning(false);
 
     // Top lane: stamp PAID after short delay
-    stampRef.current = setTimeout(() => {
+    stampRef.current = safeTimeout(() => {
       setTopStamped(true);
       const amt = parseFloat(sc.amount.replace(/[$,]/g, ""));
       setTopTotalPaid((prev) => prev + amt);
@@ -547,6 +565,7 @@ export default function DualLanes({ active, activePartners }: Props) {
     // Bottom lane: reveal clinical line by line
     let i = 0;
     revealRef.current = setInterval(() => {
+      if (pausedRef.current) return;
       i++;
       setRevealedLines(i);
       if (i >= sc.clinical.length) {
@@ -554,12 +573,6 @@ export default function DualLanes({ active, activePartners }: Props) {
 
         // Collect all active partner lines
         const ap = activePartnersRef.current;
-        const allPartnerLines: number[] = [];
-        PARTNERS.forEach((p) => {
-          if (ap.has(p.key) && sc.partnerData[p.key]) {
-            allPartnerLines.push(...sc.partnerData[p.key].map((_, i) => i));
-          }
-        });
         const totalPartnerLines = PARTNERS.reduce(
           (sum, p) => sum + (ap.has(p.key) && sc.partnerData[p.key] ? sc.partnerData[p.key].length : 0),
           0
@@ -568,19 +581,20 @@ export default function DualLanes({ active, activePartners }: Props) {
         if (totalPartnerLines > 0) {
           let p = 0;
           partnerRevealRef.current = setInterval(() => {
+            if (pausedRef.current) return;
             p++;
             setRevealedPartnerLines(p);
             if (p >= totalPartnerLines) {
               if (partnerRevealRef.current) clearInterval(partnerRevealRef.current);
-              setTimeout(() => showVerdictAndAdvance(sc, idx), VERDICT_DELAY);
+              safeTimeout(() => showVerdictAndAdvance(sc, idx), VERDICT_DELAY);
             }
           }, REVEAL_DELAY);
         } else {
-          setTimeout(() => showVerdictAndAdvance(sc, idx), VERDICT_DELAY);
+          safeTimeout(() => showVerdictAndAdvance(sc, idx), VERDICT_DELAY);
         }
       }
     }, REVEAL_DELAY);
-  }, [showVerdictAndAdvance]);
+  }, [showVerdictAndAdvance, safeTimeout]);
 
   useEffect(() => {
     if (active) {
@@ -613,6 +627,22 @@ export default function DualLanes({ active, activePartners }: Props) {
 
   return (
     <div className="flex flex-col items-center justify-center h-full gap-5 px-6">
+      {/* Sampling indicator */}
+      {active && (
+        <div className={`flex items-center gap-3 text-[10px] transition-opacity duration-500 ${paused ? "opacity-50" : "opacity-100"}`}>
+          <span className="text-gray-600">
+            Sampling from{" "}
+            <span className="text-gray-400 font-medium tabular-nums">47.2M</span>{" "}
+            Medicaid claims
+          </span>
+          {paused && (
+            <span className="text-yellow-500/70 tracking-wider uppercase font-medium text-[9px] px-2 py-0.5 rounded border border-yellow-500/20 bg-yellow-500/5 animate-fadeIn">
+              Paused
+            </span>
+          )}
+        </div>
+      )}
+
       {/* ============ TOP LANE: CURRENT SYSTEM ============ */}
       <div
         className={`w-full max-w-[800px] rounded-lg border overflow-hidden transition-all duration-700 ${
@@ -713,10 +743,10 @@ export default function DualLanes({ active, activePartners }: Props) {
               What Actually Happened
             </h4>
             <div className="space-y-2.5">
-              {Array.from({ length: 7 }).map((_, i) => (
+              {Array.from({ length: 5 }).map((_, i) => (
                 <div key={i} className="flex items-center gap-2">
                   <div
-                    className="h-3 rounded bg-gray-800/60 shimmer"
+                    className="h-3 rounded bg-gray-800/40 shimmer"
                     style={{
                       width: `${42 + ((i * 17) % 40)}%`,
                       animationDelay: `${i * 0.15}s`,
@@ -724,20 +754,24 @@ export default function DualLanes({ active, activePartners }: Props) {
                   />
                 </div>
               ))}
-              <div className="mt-4 flex items-center gap-2 text-gray-600">
+              <div className="mt-5 py-3 border border-dashed border-red-500/15 rounded bg-red-500/[0.02] flex flex-col items-center gap-2">
                 <svg
-                  width="12"
-                  height="12"
+                  width="16"
+                  height="16"
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
                   strokeWidth="2"
+                  className="text-red-500/40"
                 >
                   <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
                   <path d="M7 11V7a5 5 0 0110 0v4" />
                 </svg>
-                <span className="text-[9px] tracking-wider uppercase">
-                  No Clinical Data Available
+                <span className="text-[9px] tracking-[0.15em] uppercase text-red-500/40 font-medium">
+                  No Data Pipeline
+                </span>
+                <span className="text-[8px] text-gray-700">
+                  Clinical records inaccessible
                 </span>
               </div>
             </div>

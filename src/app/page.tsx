@@ -8,6 +8,7 @@ import StatsPanel from "@/components/StatsPanel";
 
 export default function Home() {
   const [bubbleActive, setBubbleActive] = useState(false);
+  const [paused, setPaused] = useState(false);
   const [activePartners, setActivePartners] = useState<Set<string>>(new Set());
 
   const togglePartner = (key: string) => {
@@ -27,13 +28,20 @@ export default function Home() {
       <div className="flex-1 flex min-h-0">
         {/* Main visualization area */}
         <div className="flex-1 relative grid-bg overflow-hidden">
-          <DualLanes active={bubbleActive} activePartners={activePartners} />
+          <DualLanes
+            active={bubbleActive}
+            paused={paused}
+            activePartners={activePartners}
+          />
         </div>
 
         {/* Stats panel */}
         <StatsPanel
           active={bubbleActive}
-          onActivate={() => setBubbleActive(!bubbleActive)}
+          paused={paused}
+          onActivate={() => { setBubbleActive(true); setPaused(false); }}
+          onDeactivate={() => { setBubbleActive(false); setPaused(false); }}
+          onTogglePause={() => setPaused(!paused)}
           activePartners={activePartners}
           onTogglePartner={togglePartner}
         />
