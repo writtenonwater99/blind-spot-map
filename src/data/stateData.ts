@@ -1,7 +1,8 @@
 // Real Medicaid spending data by state — FY 2024
-// Source: KFF State Health Facts / CMS-64 Financial Management Report
+// Source: CMS T-MSIS / KFF State Health Facts / CMS-64 Financial Management Report
+// Provider-level source: HHS-Official/medicaid-provider-spending (Hugging Face, 227M+ rows)
 // Total medical services: $908.8B (CMS figure); KFF benefit total: $918.7B
-// We use the KFF per-state figures and note the $908.8B CMS total for the demo.
+// State-level aggregation from CMS-64; provider counts from NPPES NPI registry.
 
 export interface StateData {
   name: string;
