@@ -464,6 +464,40 @@ const SCENARIOS: ClaimScenario[] = [
   },
 ];
 
+// Projections for time-skip
+const PROJECTIONS = {
+  "6mo": {
+    topProcessed: 2_400_000,
+    topPaid: 18_200_000_000,
+    topFlagged: 18_400,
+    topRecovered: 43_000_000,
+    processed: 2_400_000,
+    flagged: 312_000,
+    recovered: 847_000_000,
+  },
+  "12mo": {
+    topProcessed: 4_800_000,
+    topPaid: 36_400_000_000,
+    topFlagged: 37_200,
+    topRecovered: 89_000_000,
+    processed: 4_800_000,
+    flagged: 624_000,
+    recovered: 1_700_000_000,
+  },
+};
+
+function fmtCount(n: number): string {
+  if (n >= 1e6) return `${(n / 1e6).toFixed(1)}M`;
+  if (n >= 1e3) return `${(n / 1e3).toFixed(0)}K`;
+  return n.toLocaleString();
+}
+
+function fmtMoney(n: number): string {
+  if (n >= 1e9) return `$${(n / 1e9).toFixed(1)}B`;
+  if (n >= 1e6) return `$${Math.round(n / 1e6)}M`;
+  return `$${n.toLocaleString()}`;
+}
+
 // Timing
 const REVEAL_DELAY = 1100;
 const STAMP_DELAY = 1500;
@@ -477,6 +511,8 @@ interface Props {
   paused: boolean;
   activePartners: Set<string>;
   onActivate: () => void;
+  fastForwarding: boolean;
+  timeProjection: null | "6mo" | "12mo";
 }
 
 // Top-only timing (when bubble is off)
@@ -485,13 +521,15 @@ const TOP_HOLD = 2200;
 const TOP_FADE = 1000;
 const TOP_GAP = 400;
 
-export default function DualLanes({ active, paused, activePartners, onActivate }: Props) {
+export default function DualLanes({ active, paused, activePartners, onActivate, fastForwarding, timeProjection }: Props) {
   // === SHARED STATE ===
   const [currentIndex, setCurrentIndex] = useState(0);
   const [topStamped, setTopStamped] = useState(false);
   const [transitioning, setTransitioning] = useState(false);
   const [topTotalPaid, setTopTotalPaid] = useState(0);
   const [topProcessed, setTopProcessed] = useState(0);
+  const [topFlagged, setTopFlagged] = useState(0);
+  const [topRecovered, setTopRecovered] = useState(0);
 
   // === BOTTOM LANE STATE ===
   const [revealedLines, setRevealedLines] = useState(0);
@@ -513,6 +551,10 @@ export default function DualLanes({ active, paused, activePartners, onActivate }
   pausedRef.current = paused;
   const activeRef = useRef(active);
   activeRef.current = active;
+  const projectionRef = useRef(timeProjection);
+  projectionRef.current = timeProjection;
+  const ffIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const ffRafRef = useRef<number | null>(null);
 
   const topScenario = SCENARIOS[currentIndex % SCENARIOS.length];
   const scenario = topScenario;
@@ -554,12 +596,14 @@ export default function DualLanes({ active, paused, activePartners, onActivate }
   // Bottom lane verdict, then hold, then advance
   const showVerdictThenAdvance = useCallback((sc: ClaimScenario, idx: number) => {
     setShowVerdict(true);
-    setProcessedCount((prev) => prev + 1);
 
-    if (sc.outcome === "improper") {
-      setBottomFlagged((prev) => prev + 1);
-      const amt = parseFloat(sc.amount.replace(/[$,]/g, ""));
-      setBottomRecovered((prev) => prev + amt);
+    if (!projectionRef.current) {
+      setProcessedCount((prev) => prev + 1);
+      if (sc.outcome === "improper") {
+        setBottomFlagged((prev) => prev + 1);
+        const amt = parseFloat(sc.amount.replace(/[$,]/g, ""));
+        setBottomRecovered((prev) => prev + amt);
+      }
     }
 
     // Hold verdict, then both lanes transition together
@@ -581,9 +625,11 @@ export default function DualLanes({ active, paused, activePartners, onActivate }
     // Top lane: stamp after delay
     stampRef.current = setTimeout(() => {
       setTopStamped(true);
-      const amt = parseFloat(sc.amount.replace(/[$,]/g, ""));
-      setTopTotalPaid((prev) => prev + amt);
-      setTopProcessed((prev) => prev + 1);
+      if (!projectionRef.current) {
+        const amt = parseFloat(sc.amount.replace(/[$,]/g, ""));
+        setTopTotalPaid((prev) => prev + amt);
+        setTopProcessed((prev) => prev + 1);
+      }
     }, activeRef.current ? STAMP_DELAY : TOP_STAMP);
 
     if (activeRef.current) {
@@ -654,10 +700,99 @@ export default function DualLanes({ active, paused, activePartners, onActivate }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active]);
 
+  // Fast-forward burst effect
+  const prevFfRef = useRef(fastForwarding);
+  useEffect(() => {
+    if (fastForwarding && active && timeProjection) {
+      const target = PROJECTIONS[timeProjection];
+      const startVals = {
+        processed: processedCount,
+        flagged: bottomFlagged,
+        recovered: bottomRecovered,
+        topProcessed: topProcessed,
+        topPaid: topTotalPaid,
+        topFlagged: topFlagged,
+        topRecovered: topRecovered,
+      };
+      const startTime = Date.now();
+      const duration = 3000;
+
+      // Clear normal timers
+      clearAllTimers();
+
+      // Rapid claim flip loop
+      let flipIndex = currentIndex;
+      ffIntervalRef.current = setInterval(() => {
+        setTransitioning(true);
+        setTimeout(() => {
+          flipIndex = (flipIndex + 1) % SCENARIOS.length;
+          setCurrentIndex(flipIndex);
+          setRevealedLines(SCENARIOS[flipIndex].clinical.length);
+          setRevealedPartnerLines(20);
+          setShowVerdict(true);
+          setTopStamped(true);
+          setTransitioning(false);
+        }, 80);
+      }, 250);
+
+      // Counter animation
+      const animateCounters = () => {
+        const elapsed = Date.now() - startTime;
+        const p = Math.min(elapsed / duration, 1);
+        const eased = 1 - Math.pow(1 - p, 3);
+
+        setProcessedCount(Math.round(startVals.processed + (target.processed - startVals.processed) * eased));
+        setBottomFlagged(Math.round(startVals.flagged + (target.flagged - startVals.flagged) * eased));
+        setBottomRecovered(Math.round(startVals.recovered + (target.recovered - startVals.recovered) * eased));
+        setTopProcessed(Math.round(startVals.topProcessed + (target.topProcessed - startVals.topProcessed) * eased));
+        setTopTotalPaid(Math.round(startVals.topPaid + (target.topPaid - startVals.topPaid) * eased));
+        setTopFlagged(Math.round(startVals.topFlagged + (target.topFlagged - startVals.topFlagged) * eased));
+        setTopRecovered(Math.round(startVals.topRecovered + (target.topRecovered - startVals.topRecovered) * eased));
+
+        if (p < 1) ffRafRef.current = requestAnimationFrame(animateCounters);
+      };
+      ffRafRef.current = requestAnimationFrame(animateCounters);
+    }
+
+    // When burst ends, resume normal cycling
+    if (prevFfRef.current && !fastForwarding && active) {
+      if (ffIntervalRef.current) clearInterval(ffIntervalRef.current);
+      if (ffRafRef.current) cancelAnimationFrame(ffRafRef.current);
+      processClaim(currentIndex);
+    }
+
+    prevFfRef.current = fastForwarding;
+
+    return () => {
+      if (ffIntervalRef.current) clearInterval(ffIntervalRef.current);
+      if (ffRafRef.current) cancelAnimationFrame(ffRafRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fastForwarding]);
+
+  // When projection resets to live, restart counters
+  const prevProjectionRef = useRef(timeProjection);
+  useEffect(() => {
+    if (prevProjectionRef.current && !timeProjection && active) {
+      setProcessedCount(0);
+      setBottomFlagged(0);
+      setBottomRecovered(0);
+      setTopProcessed(0);
+      setTopTotalPaid(0);
+      setTopFlagged(0);
+      setTopRecovered(0);
+      clearAllTimers();
+      processClaim(currentIndex);
+    }
+    prevProjectionRef.current = timeProjection;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [timeProjection]);
+
   const bottomTotalPaid = active
     ? topTotalPaid - bottomRecovered
     : 0;
   const bottomTransitioning = transitioning;
+  const projected = !!timeProjection && !fastForwarding;
 
   return (
     <div className="flex flex-col items-center justify-center h-full gap-5 px-6">
@@ -780,32 +915,56 @@ export default function DualLanes({ active, paused, activePartners, onActivate }
         </div>
 
         {/* Lane footer tally */}
-        <div className="px-5 py-2 flex items-center gap-6 text-[10px]">
+        <div className={`px-5 flex items-center gap-6 transition-all duration-500 ${projected ? "py-3" : "py-2"} text-[10px]`}>
           <span className="text-gray-600">
             Processed:{" "}
             <span className="text-gray-400 font-medium tabular-nums">
-              {topProcessed}
+              {fmtCount(topProcessed)}
             </span>
           </span>
           <span className="text-gray-600">
             Total Paid:{" "}
             <span className="text-gray-300 font-medium tabular-nums">
-              ${topTotalPaid.toLocaleString()}
+              {fmtMoney(topTotalPaid)}
             </span>
           </span>
           <span className="text-gray-600">
             Flagged:{" "}
-            <span className="text-red-500/60 font-medium tabular-nums">0</span>
+            <span className="text-red-500/60 font-medium tabular-nums">
+              {fmtCount(topFlagged)}
+            </span>
           </span>
           <span className="text-gray-600">
             Recovered:{" "}
-            <span className="text-red-500/60 font-medium tabular-nums">$0</span>
+            <span className={`font-medium tabular-nums transition-all duration-500 ${projected ? "text-sm text-yellow-500" : "text-red-500/60"}`}>
+              {fmtMoney(topRecovered)}
+            </span>
           </span>
         </div>
       </div>
 
-      {/* Between lanes: claim strip when active, CTA when not */}
-      {active ? (
+      {/* Between lanes: delta callout when projected, claim strip when live, CTA when inactive */}
+      {active && projected ? (
+        <div className="w-full max-w-[800px] flex items-center justify-center gap-4 -my-1 animate-fadeIn">
+          <div className="h-px flex-1 bg-gradient-to-r from-transparent via-zkeleton-teal/30 to-transparent" />
+          <div className="flex items-center gap-3 text-[10px] tracking-wider">
+            <span className="text-gray-500">
+              Current System:{" "}
+              <span className="text-yellow-500 font-medium">{fmtMoney(topRecovered)}</span>
+            </span>
+            <span className="text-gray-700">vs</span>
+            <span className="text-gray-500">
+              Zkeleton:{" "}
+              <span className="text-zkeleton-teal font-medium">{fmtMoney(bottomRecovered)}</span>
+            </span>
+            <span className="text-gray-700">|</span>
+            <span className="text-zkeleton-teal font-semibold">
+              {topRecovered > 0 ? `${Math.round(bottomRecovered / topRecovered)}x` : "—"} more recovered
+            </span>
+          </div>
+          <div className="h-px flex-1 bg-gradient-to-r from-transparent via-zkeleton-teal/30 to-transparent" />
+        </div>
+      ) : active ? (
         <div className={`w-full max-w-[800px] flex items-center justify-center gap-3 -my-2 transition-all duration-700 ${
           transitioning ? "opacity-0" : "opacity-100"
         }`}>
@@ -1187,7 +1346,9 @@ export default function DualLanes({ active, paused, activePartners, onActivate }
 
             {/* Lane footer tally */}
             <div
-              className={`px-5 py-2.5 border-t flex items-center gap-6 text-[10px] transition-colors duration-500 ${
+              className={`px-5 border-t flex items-center gap-6 text-[10px] transition-all duration-500 ${
+                projected ? "py-3" : "py-2.5"
+              } ${
                 showVerdict && isImproper
                   ? "border-red-500/15 bg-red-500/3"
                   : showVerdict
@@ -1198,25 +1359,25 @@ export default function DualLanes({ active, paused, activePartners, onActivate }
               <span className="text-gray-600">
                 Processed:{" "}
                 <span className="text-gray-400 font-medium tabular-nums">
-                  {processedCount}
+                  {fmtCount(processedCount)}
                 </span>
               </span>
               <span className="text-gray-600">
                 Verified:{" "}
                 <span className="text-green-400/80 font-medium tabular-nums">
-                  ${bottomTotalPaid.toLocaleString()}
+                  {fmtMoney(bottomTotalPaid)}
                 </span>
               </span>
               <span className="text-gray-600">
                 Flagged:{" "}
                 <span className="text-red-400 font-medium tabular-nums">
-                  {bottomFlagged}
+                  {fmtCount(bottomFlagged)}
                 </span>
               </span>
               <span className="text-gray-600">
                 Recovered:{" "}
-                <span className="text-zkeleton-teal font-medium tabular-nums">
-                  ${bottomRecovered.toLocaleString()}
+                <span className={`font-medium tabular-nums transition-all duration-500 ${projected ? "text-sm text-zkeleton-teal" : "text-zkeleton-teal"}`}>
+                  {fmtMoney(bottomRecovered)}
                 </span>
               </span>
             </div>

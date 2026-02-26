@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import Header from "@/components/Header";
 
 import DualLanes from "@/components/DualLanes";
@@ -10,6 +10,9 @@ export default function Home() {
   const [bubbleActive, setBubbleActive] = useState(false);
   const [paused, setPaused] = useState(false);
   const [activePartners, setActivePartners] = useState<Set<string>>(new Set());
+  const [timeProjection, setTimeProjection] = useState<null | "6mo" | "12mo">(null);
+  const [fastForwarding, setFastForwarding] = useState(false);
+  const ffTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const togglePartner = (key: string) => {
     setActivePartners((prev) => {
@@ -19,6 +22,22 @@ export default function Home() {
       return next;
     });
   };
+
+  const onTimeProject = useCallback((period: "6mo" | "12mo") => {
+    setTimeProjection(period);
+    setFastForwarding(true);
+    setPaused(false);
+    if (ffTimerRef.current) clearTimeout(ffTimerRef.current);
+    ffTimerRef.current = setTimeout(() => {
+      setFastForwarding(false);
+    }, 3000);
+  }, []);
+
+  const onResetProjection = useCallback(() => {
+    setTimeProjection(null);
+    setFastForwarding(false);
+    if (ffTimerRef.current) clearTimeout(ffTimerRef.current);
+  }, []);
 
   return (
     <div className="h-screen w-screen flex flex-col bg-zkeleton-dark overflow-hidden">
@@ -31,6 +50,8 @@ export default function Home() {
             paused={paused}
             activePartners={activePartners}
             onActivate={() => { setBubbleActive(true); setPaused(false); }}
+            fastForwarding={fastForwarding}
+            timeProjection={timeProjection}
           />
         </div>
 
@@ -39,10 +60,14 @@ export default function Home() {
           active={bubbleActive}
           paused={paused}
           onActivate={() => { setBubbleActive(true); setPaused(false); }}
-          onDeactivate={() => { setBubbleActive(false); setPaused(false); }}
+          onDeactivate={() => { setBubbleActive(false); setPaused(false); setTimeProjection(null); setFastForwarding(false); }}
           onTogglePause={() => setPaused(!paused)}
           activePartners={activePartners}
           onTogglePartner={togglePartner}
+          fastForwarding={fastForwarding}
+          timeProjection={timeProjection}
+          onTimeProject={onTimeProject}
+          onResetProjection={onResetProjection}
         />
       </div>
     </div>

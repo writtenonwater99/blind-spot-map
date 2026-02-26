@@ -16,6 +16,10 @@ interface Props {
   onTogglePause: () => void;
   activePartners: Set<string>;
   onTogglePartner: (key: string) => void;
+  fastForwarding: boolean;
+  timeProjection: null | "6mo" | "12mo";
+  onTimeProject: (period: "6mo" | "12mo") => void;
+  onResetProjection: () => void;
 }
 
 const PARTNER_TILES = [
@@ -113,6 +117,10 @@ export default function StatsPanel({
   onTogglePause,
   activePartners,
   onTogglePartner,
+  fastForwarding,
+  timeProjection,
+  onTimeProject,
+  onResetProjection,
 }: Props) {
   const hasPartners = activePartners.size > 0;
   const daysLeft = useDaysUntil(CMS_DEADLINE);
@@ -241,6 +249,50 @@ export default function StatsPanel({
           </div>
         )}
       </div>
+
+      {/* ============ TIME PROJECTION ============ */}
+      {active && (
+        <div className="px-6 pb-4 -mt-2">
+          {fastForwarding ? (
+            <div className="flex items-center justify-center gap-2 py-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-zkeleton-teal animate-pulse" />
+              <span className="text-[10px] text-zkeleton-teal tracking-wider uppercase font-medium">
+                Fast-forwarding...
+              </span>
+            </div>
+          ) : timeProjection ? (
+            <div className="flex items-center justify-between py-1">
+              <span className="text-[10px] text-zkeleton-teal tracking-wider uppercase font-medium">
+                Projected: {timeProjection === "6mo" ? "6 Months" : "12 Months"}
+              </span>
+              <button
+                onClick={onResetProjection}
+                className="text-[10px] text-gray-500 hover:text-gray-300 tracking-wider uppercase cursor-pointer transition-colors"
+              >
+                Back to Live
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <span className="text-[9px] text-gray-600 tracking-wider uppercase shrink-0">
+                Skip to:
+              </span>
+              <button
+                onClick={() => onTimeProject("6mo")}
+                className="flex-1 py-1.5 rounded text-[10px] tracking-wider uppercase font-medium cursor-pointer transition-all bg-white/[0.03] text-gray-400 hover:bg-white/[0.06] hover:text-gray-300"
+              >
+                6 Months
+              </button>
+              <button
+                onClick={() => onTimeProject("12mo")}
+                className="flex-1 py-1.5 rounded text-[10px] tracking-wider uppercase font-medium cursor-pointer transition-all bg-white/[0.03] text-gray-400 hover:bg-white/[0.06] hover:text-gray-300"
+              >
+                12 Months
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ============ PARTNER ECOSYSTEM GRID ============ */}
       {active && (
