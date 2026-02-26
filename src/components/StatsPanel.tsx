@@ -120,7 +120,7 @@ export default function StatsPanel({
   return (
     <aside className="w-[380px] border-l border-zkeleton-border bg-zkeleton-panel flex flex-col overflow-y-auto">
       {/* Hero stat */}
-      <div className="p-6 border-b border-zkeleton-border">
+      <div className="p-6 ">
         <h2 className="text-[10px] text-zkeleton-muted tracking-[0.2em] uppercase mb-3">
           Total Medicaid Claims · FY 2024
         </h2>
@@ -135,7 +135,7 @@ export default function StatsPanel({
       </div>
 
       {/* Metrics */}
-      <div className="p-6 border-b border-zkeleton-border space-y-5">
+      <div className="p-6  space-y-5">
         <Metric
           label="Claims Flying Blind"
           value={`${(BLIND_RATE * 100).toFixed(0)}%+`}
@@ -163,7 +163,7 @@ export default function StatsPanel({
       </div>
 
       {/* How it works / What's happening */}
-      <div className="p-6 border-b border-zkeleton-border">
+      <div className="p-6 ">
         {active ? (
           <>
             <h3 className="text-[10px] text-green-400 tracking-[0.2em] uppercase mb-3">
@@ -202,11 +202,11 @@ export default function StatsPanel({
       </div>
 
       {/* Activate / Pause / Deactivate */}
-      <div className="p-6 border-b border-zkeleton-border">
+      <div className="p-6 ">
         {!active ? (
           <button
             onClick={onActivate}
-            className="w-full py-3 rounded font-medium text-xs tracking-wider uppercase transition-all duration-500 cursor-pointer bg-zkeleton-teal/8 text-zkeleton-teal border border-zkeleton-teal/20 hover:bg-zkeleton-teal/15 pulse-teal"
+            className="w-full py-3 rounded font-medium text-xs tracking-wider uppercase transition-all duration-500 cursor-pointer bg-zkeleton-teal/8 text-zkeleton-teal hover:bg-zkeleton-teal/15 pulse-teal"
           >
             {"\u2197 Activate Bubble"}
           </button>
@@ -216,8 +216,8 @@ export default function StatsPanel({
               onClick={onTogglePause}
               className={`w-full py-3 rounded font-medium text-xs tracking-wider uppercase transition-all duration-500 cursor-pointer ${
                 paused
-                  ? "bg-yellow-500/8 text-yellow-500 border border-yellow-500/20 hover:bg-yellow-500/15"
-                  : "bg-green-500/10 text-green-400 border border-green-500/25 hover:bg-green-500/15"
+                  ? "bg-yellow-500/8 text-yellow-500 hover:bg-yellow-500/15"
+                  : "bg-green-500/10 text-green-400 hover:bg-green-500/15"
               }`}
             >
               {paused ? (
@@ -244,7 +244,7 @@ export default function StatsPanel({
 
       {/* ============ PARTNER ECOSYSTEM GRID ============ */}
       {active && (
-        <div className="p-6 border-b border-zkeleton-border animate-fadeIn">
+        <div className="p-6  animate-fadeIn">
           <h3 className="text-[10px] text-zkeleton-teal tracking-[0.2em] uppercase mb-1">
             Bubble Ecosystem
           </h3>
@@ -261,8 +261,8 @@ export default function StatsPanel({
                   onClick={() => onTogglePartner(p.key)}
                   className={`flex flex-col items-center gap-2 py-3 px-2 rounded-lg text-center transition-all duration-300 cursor-pointer ${
                     isActive
-                      ? "bg-zkeleton-teal/10 border border-zkeleton-teal/30 shadow-[0_0_12px_rgba(45,212,170,0.08)]"
-                      : "bg-white/[0.01] border border-dashed border-gray-700/60 hover:border-gray-500 hover:bg-white/[0.02]"
+                      ? "bg-zkeleton-teal/8"
+                      : "bg-white/[0.02] hover:bg-white/[0.04]"
                   }`}
                 >
                   <span
@@ -297,7 +297,7 @@ export default function StatsPanel({
 
       {/* ============ VALUE EXCHANGE ============ */}
       {active && hasPartners && (
-        <div className="p-6 border-b border-zkeleton-border animate-fadeIn">
+        <div className="p-6  animate-fadeIn">
           <h3 className="text-[10px] text-zkeleton-teal tracking-[0.2em] uppercase mb-4">
             Value Exchange
           </h3>
@@ -342,7 +342,7 @@ export default function StatsPanel({
             </div>
           </div>
 
-          <div className="rounded border border-zkeleton-teal/15 bg-zkeleton-teal/[0.03] px-3 py-2.5">
+          <div className="mt-2 pt-3">
             <p className="text-[10px] text-gray-400 leading-relaxed">
               No data leaves the bubble. No data is sold.
             </p>
@@ -355,7 +355,7 @@ export default function StatsPanel({
 
       {/* ============ CMS-0057 COUNTDOWN ============ */}
       <div className="p-6 mt-auto">
-        <div className="rounded border border-zkeleton-border bg-zkeleton-dark/60 p-4">
+        <div>
           <div className="flex items-baseline justify-between mb-1">
             <span className="text-[9px] tracking-[0.15em] uppercase text-gray-500 font-medium">
               CMS-0057 Mandate
@@ -431,9 +431,9 @@ function Step({
 }) {
   return (
     <div className="flex gap-3">
-      <div className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0 mt-0.5 bg-zkeleton-dark text-gray-600 border border-zkeleton-border">
+      <span className="text-[9px] font-bold shrink-0 mt-0.5 text-gray-600 w-5">
         {n}
-      </div>
+      </span>
       <p className="text-[11px] leading-relaxed text-gray-500">
         {text}
       </p>

@@ -669,7 +669,7 @@ export default function DualLanes({ active, paused, activePartners, onActivate }
           Medicaid claims
         </span>
         {active && paused && (
-          <span className="text-yellow-500/70 tracking-wider uppercase font-medium text-[9px] px-2 py-0.5 rounded border border-yellow-500/20 bg-yellow-500/5 animate-fadeIn">
+          <span className="text-yellow-500/70 tracking-wider uppercase font-medium text-[9px] animate-fadeIn">
             Paused
           </span>
         )}
@@ -677,16 +677,12 @@ export default function DualLanes({ active, paused, activePartners, onActivate }
 
       {/* ============ TOP LANE: CURRENT SYSTEM ============ */}
       <div
-        className={`w-full max-w-[800px] rounded-lg border overflow-hidden transition-all duration-700 ${
+        className={`w-full max-w-[800px] rounded-lg overflow-hidden bg-zkeleton-panel/20 transition-all duration-700 ${
           transitioning ? "opacity-0 scale-[0.98]" : "opacity-100 scale-100"
-        } ${
-          topStamped
-            ? "border-gray-700/50 shadow-[0_0_30px_rgba(0,0,0,0.4)]"
-            : "border-zkeleton-border shadow-[0_0_40px_rgba(0,0,0,0.3)]"
         }`}
       >
-        {/* Lane header */}
-        <div className="px-5 py-3 border-b border-zkeleton-border bg-zkeleton-panel flex items-center justify-between">
+        {/* Lane label */}
+        <div className="px-5 py-2 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <span className="w-2 h-2 rounded-full bg-gray-500" />
             <span className="text-[10px] text-gray-400 tracking-[0.2em] uppercase font-medium">
@@ -701,11 +697,11 @@ export default function DualLanes({ active, paused, activePartners, onActivate }
             </span>
           </div>
           {topStamped ? (
-            <span className="text-[10px] tracking-wider uppercase font-medium px-2 py-0.5 rounded border text-yellow-500/80 border-yellow-500/20 bg-yellow-500/5 animate-fadeIn">
+            <span className="text-[10px] tracking-wider uppercase font-medium text-yellow-500/80 animate-fadeIn">
               Paid — No Verification
             </span>
           ) : (
-            <span className="text-[10px] tracking-wider uppercase text-gray-600 font-medium px-2 py-0.5 rounded border border-zkeleton-border">
+            <span className="text-[10px] tracking-wider uppercase text-gray-600 font-medium">
               Processing...
             </span>
           )}
@@ -759,7 +755,7 @@ export default function DualLanes({ active, paused, activePartners, onActivate }
                   />
                 </div>
               ))}
-              <div className="mt-5 py-3 border border-dashed border-red-500/15 rounded bg-red-500/[0.02] flex flex-col items-center gap-2">
+              <div className="mt-5 py-3 flex flex-col items-center gap-2">
                 <svg
                   width="16"
                   height="16"
@@ -784,7 +780,7 @@ export default function DualLanes({ active, paused, activePartners, onActivate }
         </div>
 
         {/* Lane footer tally */}
-        <div className="px-5 py-2.5 border-t border-zkeleton-border bg-zkeleton-panel/50 flex items-center gap-6 text-[10px]">
+        <div className="px-5 py-2 flex items-center gap-6 text-[10px]">
           <span className="text-gray-600">
             Processed:{" "}
             <span className="text-gray-400 font-medium tabular-nums">
@@ -823,7 +819,7 @@ export default function DualLanes({ active, paused, activePartners, onActivate }
         <div className="w-full max-w-[800px] flex items-center justify-center -my-1">
           <button
             onClick={onActivate}
-            className="px-8 py-2.5 rounded-full font-medium text-xs tracking-wider uppercase transition-all duration-500 cursor-pointer bg-zkeleton-teal/10 text-zkeleton-teal border border-zkeleton-teal/25 hover:bg-zkeleton-teal/20 hover:shadow-[0_0_20px_rgba(45,212,170,0.15)] pulse-teal"
+            className="px-8 py-2.5 rounded-full font-medium text-xs tracking-wider uppercase transition-all duration-500 cursor-pointer bg-zkeleton-teal/10 text-zkeleton-teal hover:bg-zkeleton-teal/20 pulse-teal"
           >
             {"\u2197 Activate Bubble — See What\u2019s Hidden"}
           </button>
@@ -840,7 +836,7 @@ export default function DualLanes({ active, paused, activePartners, onActivate }
             {PARTNERS.filter((p) => activePartners.has(p.key)).map((p) => (
               <div
                 key={p.key}
-                className="w-7 h-7 rounded-full bg-zkeleton-panel border border-zkeleton-teal/30 flex items-center justify-center shadow-[0_0_8px_rgba(45,212,170,0.15)]"
+                className="w-7 h-7 rounded-full bg-zkeleton-teal/10 flex items-center justify-center"
                 title={p.name}
               >
                 <span className="text-zkeleton-teal">{PARTNER_ICONS[p.key]}</span>
@@ -991,7 +987,7 @@ export default function DualLanes({ active, paused, activePartners, onActivate }
                 </div>
 
                 {/* Billing verdict */}
-                <div className="mt-5 pt-3 border-t border-zkeleton-border">
+                <div className="mt-5 pt-3">
                   <span
                     className={`text-[10px] font-medium tracking-wide uppercase transition-colors duration-500 ${
                       showVerdict && isImproper
@@ -1099,7 +1095,7 @@ export default function DualLanes({ active, paused, activePartners, onActivate }
                       const myOffset = offset;
                       offset += lines.length;
                       return (
-                        <div key={partner.key} className="mt-3 pt-2.5 border-t border-zkeleton-teal/15">
+                        <div key={partner.key} className="mt-3 pt-2.5">
                           <div className="flex items-center gap-1.5 mb-2">
                             <span className="w-1.5 h-1.5 rounded-full bg-zkeleton-teal animate-pulse" />
                             <span className="text-[8px] tracking-[0.2em] uppercase text-zkeleton-teal/70 font-medium">
@@ -1138,9 +1134,7 @@ export default function DualLanes({ active, paused, activePartners, onActivate }
 
                   {showVerdict && (
                     <div
-                      className={`mt-4 pt-2.5 border-t animate-fadeIn ${
-                        isImproper ? "border-red-500/20" : "border-green-500/20"
-                      }`}
+                      className="mt-4 pt-2.5 animate-fadeIn"
                     >
                       <div
                         className={`flex items-center gap-2 ${
