@@ -989,7 +989,7 @@ export default function DualLanes({ active, paused, activePartners, onActivate, 
               </span>
               <span className="text-gray-700">|</span>
               <span className="text-zkeleton-teal font-semibold">
-                {topRecovered > 0 ? `${Math.round(bottomRecovered / topRecovered)}x` : "\u2014"} more recovered
+                {topRecovered > 0 ? `${Math.round(bottomRecovered / topRecovered)}x` : "\u2014"} more exposed
               </span>
             </div>
             <div className="h-px flex-1 bg-gradient-to-r from-transparent via-zkeleton-teal/30 to-transparent" />
@@ -1415,10 +1415,13 @@ export default function DualLanes({ active, paused, activePartners, onActivate, 
                   {fmtCount(bottomFlagged)}
                 </span>
               </span>
-              <span className="text-gray-600">
-                Recovered:{" "}
+              <span className="text-gray-600 relative group">
+                Exposed:{" "}
                 <span className={`font-medium tabular-nums transition-all duration-500 ${projected ? "text-sm text-zkeleton-teal" : "text-zkeleton-teal"}`}>
                   {fmtMoney(bottomRecovered)}
+                </span>
+                <span className="tooltip absolute bottom-full left-0 mb-2 px-3 py-2 rounded bg-zkeleton-panel text-[9px] text-gray-400 leading-relaxed w-56 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-20 shadow-lg">
+                  Surfaced from single-dataset identity matching (Middesk, 2026). Clinical layer untouched.
                 </span>
               </span>
             </div>

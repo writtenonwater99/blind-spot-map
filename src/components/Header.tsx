@@ -39,7 +39,7 @@ export default function Header() {
         <div className="h-4 w-px bg-zkeleton-border" />
 
         <h1 className="text-sm text-gray-400 tracking-wide uppercase">
-          The Blind Spot Map
+          Data Vision
         </h1>
 
         <div className="h-4 w-px bg-zkeleton-border" />
