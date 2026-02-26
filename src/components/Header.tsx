@@ -56,8 +56,6 @@ export default function Header() {
         </span>
         <span className="opacity-50">|</span>
         <span>FY 2024</span>
-        <span className="opacity-50">|</span>
-        <span>CMS / KFF / HHS OIG</span>
       </div>
     </header>
   );

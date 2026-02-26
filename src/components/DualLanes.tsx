@@ -469,8 +469,8 @@ const REVEAL_DELAY = 1100;
 const STAMP_DELAY = 1500;
 const VERDICT_DELAY = 800;
 const HOLD_TIME = 3000;
-const FADE_TIME = 2000;
-const GAP_TIME = 700;
+const FADE_TIME = 1200;
+const GAP_TIME = 400;
 
 interface Props {
   active: boolean;
@@ -794,14 +794,27 @@ export default function DualLanes({ active, paused, activePartners }: Props) {
           </span>
           <span className="text-gray-600">
             Flagged:{" "}
-            <span className="text-gray-500 font-medium tabular-nums">0</span>
+            <span className="text-red-500/60 font-medium tabular-nums">0</span>
           </span>
           <span className="text-gray-600">
             Recovered:{" "}
-            <span className="text-gray-500 font-medium tabular-nums">$0</span>
+            <span className="text-red-500/60 font-medium tabular-nums">$0</span>
           </span>
         </div>
       </div>
+
+      {/* Shared claim strip */}
+      {active && (
+        <div className={`w-full max-w-[800px] flex items-center justify-center gap-3 -my-2 transition-all duration-700 ${
+          transitioning ? "opacity-0" : "opacity-100"
+        }`}>
+          <div className="h-px flex-1 bg-gradient-to-r from-transparent via-gray-700/50 to-transparent" />
+          <span className="text-[9px] text-gray-500 tracking-wider font-mono tabular-nums shrink-0">
+            Same Claim {scenario.id} · {scenario.amount}
+          </span>
+          <div className="h-px flex-1 bg-gradient-to-r from-transparent via-gray-700/50 to-transparent" />
+        </div>
+      )}
 
       {/* ============ BOTTOM LANE: ZKELETON PRIVATE BUBBLE ============ */}
       <div className="w-full max-w-[800px] relative">
@@ -894,42 +907,41 @@ export default function DualLanes({ active, paused, activePartners }: Props) {
         </div>
 
         {!active ? (
-          /* Inactive state */
-          <div className="px-5 py-10 flex flex-col items-center justify-center gap-3">
-            <svg
-              width="32"
-              height="32"
-              viewBox="0 0 28 28"
-              fill="none"
-              className="opacity-20"
-            >
-              <rect
-                x="2"
-                y="2"
-                width="24"
-                height="24"
-                rx="4"
-                stroke="#2dd4aa"
-                strokeWidth="2"
-                fill="none"
-              />
-              <path
-                d="M8 10h12M8 14h12M8 18h12"
-                stroke="#2dd4aa"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                opacity="0.6"
-              />
-              <path
-                d="M10 8v12"
-                stroke="#2dd4aa"
-                strokeWidth="2"
-                strokeLinecap="round"
-              />
-            </svg>
-            <p className="text-[11px] text-gray-600 tracking-wide">
-              Activate Bubble to begin clinical matching
-            </p>
+          /* Inactive state — ghosted preview */
+          <div className="flex">
+            <div className="w-1/2 p-5 bg-zkeleton-dark/40 opacity-30">
+              <h4 className="text-[9px] tracking-[0.2em] uppercase text-gray-700 mb-4">
+                Billing Codes
+              </h4>
+              <div className="space-y-3">
+                {[0, 1, 2, 3, 4].map((i) => (
+                  <div key={i} className="flex items-center justify-between">
+                    <div className="h-3 rounded bg-gray-800/60" style={{ width: `${30 + ((i * 13) % 25)}%` }} />
+                    <div className="h-3 rounded bg-gray-800/40" style={{ width: `${25 + ((i * 11) % 20)}%` }} />
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="w-px bg-zkeleton-border/30" />
+            <div className="w-1/2 p-5 bg-zkeleton-dark/40 relative">
+              <h4 className="text-[9px] tracking-[0.2em] uppercase text-gray-700 mb-4">
+                Clinical Records
+              </h4>
+              <div className="space-y-2.5 opacity-20">
+                {[0, 1, 2, 3, 4, 5].map((i) => (
+                  <div key={i} className="h-3 rounded bg-zkeleton-teal/20" style={{ width: `${35 + ((i * 19) % 45)}%` }} />
+                ))}
+              </div>
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-zkeleton-dark/60">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-zkeleton-teal/30 mb-2">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                  <path d="M7 11V7a5 5 0 0110 0v4" />
+                </svg>
+                <p className="text-[10px] text-zkeleton-teal/40 tracking-wide font-medium">
+                  Activate to unlock
+                </p>
+              </div>
+            </div>
           </div>
         ) : (
           <>
