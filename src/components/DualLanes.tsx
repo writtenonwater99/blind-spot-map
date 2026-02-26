@@ -476,38 +476,52 @@ interface Props {
   active: boolean;
   paused: boolean;
   activePartners: Set<string>;
+  onActivate: () => void;
 }
 
-export default function DualLanes({ active, paused, activePartners }: Props) {
+// Top-only timing (when bubble is off)
+const TOP_STAMP = 1200;
+const TOP_HOLD = 2200;
+const TOP_FADE = 1000;
+const TOP_GAP = 400;
+
+export default function DualLanes({ active, paused, activePartners, onActivate }: Props) {
+  // === SHARED STATE ===
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [topStamped, setTopStamped] = useState(false);
+  const [transitioning, setTransitioning] = useState(false);
+  const [topTotalPaid, setTopTotalPaid] = useState(0);
+  const [topProcessed, setTopProcessed] = useState(0);
+
+  // === BOTTOM LANE STATE ===
   const [revealedLines, setRevealedLines] = useState(0);
   const [revealedPartnerLines, setRevealedPartnerLines] = useState(0);
   const [showVerdict, setShowVerdict] = useState(false);
-  const [topStamped, setTopStamped] = useState(false);
-  const [transitioning, setTransitioning] = useState(false);
-
   const [processedCount, setProcessedCount] = useState(0);
-  const [topTotalPaid, setTopTotalPaid] = useState(0);
   const [bottomFlagged, setBottomFlagged] = useState(0);
   const [bottomRecovered, setBottomRecovered] = useState(0);
 
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const revealRef = useRef<NodeJS.Timeout | null>(null);
+  // Refs
+  const masterTimerRef = useRef<NodeJS.Timeout | null>(null);
   const stampRef = useRef<NodeJS.Timeout | null>(null);
+  const revealRef = useRef<NodeJS.Timeout | null>(null);
   const partnerRevealRef = useRef<NodeJS.Timeout | null>(null);
   const pauseWaitRef = useRef<NodeJS.Timeout | null>(null);
   const activePartnersRef = useRef(activePartners);
   activePartnersRef.current = activePartners;
   const pausedRef = useRef(paused);
   pausedRef.current = paused;
+  const activeRef = useRef(active);
+  activeRef.current = active;
 
-  const scenario = SCENARIOS[currentIndex % SCENARIOS.length];
+  const topScenario = SCENARIOS[currentIndex % SCENARIOS.length];
+  const scenario = topScenario;
   const isImproper = scenario.outcome === "improper";
 
-  const clearTimers = () => {
-    if (timerRef.current) clearTimeout(timerRef.current);
-    if (revealRef.current) clearInterval(revealRef.current);
+  const clearAllTimers = () => {
+    if (masterTimerRef.current) clearTimeout(masterTimerRef.current);
     if (stampRef.current) clearTimeout(stampRef.current);
+    if (revealRef.current) clearInterval(revealRef.current);
     if (partnerRevealRef.current) clearInterval(partnerRevealRef.current);
     if (pauseWaitRef.current) clearInterval(pauseWaitRef.current);
   };
@@ -525,7 +539,20 @@ export default function DualLanes({ active, paused, activePartners }: Props) {
     }, delay);
   }, []);
 
-  const showVerdictAndAdvance = useCallback((sc: ClaimScenario, idx: number) => {
+  // Advance to next claim — both lanes together
+  const advanceToNext = useCallback((idx: number) => {
+    setTransitioning(true);
+    const fadeDur = activeRef.current ? FADE_TIME : TOP_FADE;
+    const gapDur = activeRef.current ? GAP_TIME : TOP_GAP;
+    masterTimerRef.current = setTimeout(() => {
+      const next = (idx + 1) % SCENARIOS.length;
+      setTransitioning(false);
+      setTimeout(() => processClaim(next), gapDur);
+    }, fadeDur);
+  }, []);
+
+  // Bottom lane verdict, then hold, then advance
+  const showVerdictThenAdvance = useCallback((sc: ClaimScenario, idx: number) => {
     setShowVerdict(true);
     setProcessedCount((prev) => prev + 1);
 
@@ -535,120 +562,125 @@ export default function DualLanes({ active, paused, activePartners }: Props) {
       setBottomRecovered((prev) => prev + amt);
     }
 
-    // Hold verdict, then transition to next
-    timerRef.current = safeTimeout(() => {
-      setTransitioning(true);
-      safeTimeout(() => {
-        const next = (idx + 1) % SCENARIOS.length;
-        setTransitioning(false);
-        safeTimeout(() => processClaim(next), GAP_TIME);
-      }, FADE_TIME);
+    // Hold verdict, then both lanes transition together
+    masterTimerRef.current = safeTimeout(() => {
+      advanceToNext(idx);
     }, HOLD_TIME);
-  }, [safeTimeout]);
+  }, [safeTimeout, advanceToNext]);
 
+  // Process a claim — handles both lanes
   const processClaim = useCallback((idx: number) => {
     const sc = SCENARIOS[idx % SCENARIOS.length];
     setCurrentIndex(idx % SCENARIOS.length);
+    setTopStamped(false);
+    setTransitioning(false);
     setRevealedLines(0);
     setRevealedPartnerLines(0);
     setShowVerdict(false);
-    setTopStamped(false);
-    setTransitioning(false);
 
-    // Top lane: stamp PAID after short delay
-    stampRef.current = safeTimeout(() => {
+    // Top lane: stamp after delay
+    stampRef.current = setTimeout(() => {
       setTopStamped(true);
       const amt = parseFloat(sc.amount.replace(/[$,]/g, ""));
       setTopTotalPaid((prev) => prev + amt);
-    }, STAMP_DELAY);
+      setTopProcessed((prev) => prev + 1);
+    }, activeRef.current ? STAMP_DELAY : TOP_STAMP);
 
-    // Bottom lane: reveal clinical line by line
-    let i = 0;
-    revealRef.current = setInterval(() => {
-      if (pausedRef.current) return;
-      i++;
-      setRevealedLines(i);
-      if (i >= sc.clinical.length) {
-        if (revealRef.current) clearInterval(revealRef.current);
+    if (activeRef.current) {
+      // === BUBBLE ACTIVE: bottom lane reveals clinical, then advance ===
+      let i = 0;
+      revealRef.current = setInterval(() => {
+        if (pausedRef.current) return;
+        i++;
+        setRevealedLines(i);
+        if (i >= sc.clinical.length) {
+          if (revealRef.current) clearInterval(revealRef.current);
 
-        // Collect all active partner lines
-        const ap = activePartnersRef.current;
-        const totalPartnerLines = PARTNERS.reduce(
-          (sum, p) => sum + (ap.has(p.key) && sc.partnerData[p.key] ? sc.partnerData[p.key].length : 0),
-          0
-        );
+          const ap = activePartnersRef.current;
+          const totalPartnerLines = PARTNERS.reduce(
+            (sum, p) => sum + (ap.has(p.key) && sc.partnerData[p.key] ? sc.partnerData[p.key].length : 0),
+            0
+          );
 
-        if (totalPartnerLines > 0) {
-          let p = 0;
-          partnerRevealRef.current = setInterval(() => {
-            if (pausedRef.current) return;
-            p++;
-            setRevealedPartnerLines(p);
-            if (p >= totalPartnerLines) {
-              if (partnerRevealRef.current) clearInterval(partnerRevealRef.current);
-              safeTimeout(() => showVerdictAndAdvance(sc, idx), VERDICT_DELAY);
-            }
-          }, REVEAL_DELAY);
-        } else {
-          safeTimeout(() => showVerdictAndAdvance(sc, idx), VERDICT_DELAY);
+          if (totalPartnerLines > 0) {
+            let p = 0;
+            partnerRevealRef.current = setInterval(() => {
+              if (pausedRef.current) return;
+              p++;
+              setRevealedPartnerLines(p);
+              if (p >= totalPartnerLines) {
+                if (partnerRevealRef.current) clearInterval(partnerRevealRef.current);
+                safeTimeout(() => showVerdictThenAdvance(sc, idx), VERDICT_DELAY);
+              }
+            }, REVEAL_DELAY);
+          } else {
+            safeTimeout(() => showVerdictThenAdvance(sc, idx), VERDICT_DELAY);
+          }
         }
-      }
-    }, REVEAL_DELAY);
-  }, [showVerdictAndAdvance, safeTimeout]);
-
-  useEffect(() => {
-    if (active) {
-      setProcessedCount(0);
-      setTopTotalPaid(0);
-      setBottomFlagged(0);
-      setBottomRecovered(0);
-      setTopStamped(false);
-      setShowVerdict(false);
-      setRevealedLines(0);
-      setRevealedPartnerLines(0);
-      processClaim(0);
+      }, REVEAL_DELAY);
     } else {
-      clearTimers();
-      setTransitioning(false);
-      setTopStamped(false);
-      setShowVerdict(false);
-      setRevealedLines(0);
-      setRevealedPartnerLines(0);
-      setCurrentIndex(0);
+      // === BUBBLE OFF: top lane only, stamp then hold then advance ===
+      masterTimerRef.current = setTimeout(() => {
+        advanceToNext(idx);
+      }, TOP_STAMP + TOP_HOLD);
     }
-    return () => clearTimers();
+  }, [showVerdictThenAdvance, safeTimeout, advanceToNext]);
+
+  // Start on mount
+  useEffect(() => {
+    processClaim(0);
+    return () => clearAllTimers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // When bubble activates/deactivates, restart from current claim
+  const prevActiveRef = useRef(active);
+  useEffect(() => {
+    if (prevActiveRef.current !== active) {
+      clearAllTimers();
+      if (active) {
+        setProcessedCount(0);
+        setBottomFlagged(0);
+        setBottomRecovered(0);
+      } else {
+        setShowVerdict(false);
+        setRevealedLines(0);
+        setRevealedPartnerLines(0);
+      }
+      // Restart current claim with new mode
+      processClaim(currentIndex);
+      prevActiveRef.current = active;
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active]);
 
-  const parseAmt = (s: string) => parseFloat(s.replace(/[$,]/g, ""));
   const bottomTotalPaid = active
     ? topTotalPaid - bottomRecovered
     : 0;
+  const bottomTransitioning = transitioning;
 
   return (
     <div className="flex flex-col items-center justify-center h-full gap-5 px-6">
       {/* Sampling indicator */}
-      {active && (
-        <div className={`flex items-center gap-3 text-[10px] transition-opacity duration-500 ${paused ? "opacity-50" : "opacity-100"}`}>
-          <span className="text-gray-600">
-            Sampling from{" "}
-            <span className="text-gray-400 font-medium tabular-nums">47.2M</span>{" "}
-            Medicaid claims
+      <div className={`flex items-center gap-3 text-[10px] transition-opacity duration-500 ${paused ? "opacity-50" : "opacity-100"}`}>
+        <span className="text-gray-600">
+          Sampling from{" "}
+          <span className="text-gray-400 font-medium tabular-nums">47.2M</span>{" "}
+          Medicaid claims
+        </span>
+        {active && paused && (
+          <span className="text-yellow-500/70 tracking-wider uppercase font-medium text-[9px] px-2 py-0.5 rounded border border-yellow-500/20 bg-yellow-500/5 animate-fadeIn">
+            Paused
           </span>
-          {paused && (
-            <span className="text-yellow-500/70 tracking-wider uppercase font-medium text-[9px] px-2 py-0.5 rounded border border-yellow-500/20 bg-yellow-500/5 animate-fadeIn">
-              Paused
-            </span>
-          )}
-        </div>
-      )}
+        )}
+      </div>
 
       {/* ============ TOP LANE: CURRENT SYSTEM ============ */}
       <div
         className={`w-full max-w-[800px] rounded-lg border overflow-hidden transition-all duration-700 ${
           transitioning ? "opacity-0 scale-[0.98]" : "opacity-100 scale-100"
         } ${
-          active && topStamped
+          topStamped
             ? "border-gray-700/50 shadow-[0_0_30px_rgba(0,0,0,0.4)]"
             : "border-zkeleton-border shadow-[0_0_40px_rgba(0,0,0,0.3)]"
         }`}
@@ -660,31 +692,21 @@ export default function DualLanes({ active, paused, activePartners }: Props) {
             <span className="text-[10px] text-gray-400 tracking-[0.2em] uppercase font-medium">
               Current System
             </span>
-            {active && (
-              <>
-                <span className="text-[10px] text-gray-600">|</span>
-                <span className="text-[10px] text-gray-500 tracking-wider">
-                  Claim
-                </span>
-                <span className="text-xs text-gray-300 font-mono tabular-nums">
-                  {scenario.id}
-                </span>
-              </>
-            )}
+            <span className="text-[10px] text-gray-600">|</span>
+            <span className="text-[10px] text-gray-500 tracking-wider">
+              Claim
+            </span>
+            <span className="text-xs text-gray-300 font-mono tabular-nums">
+              {topScenario.id}
+            </span>
           </div>
-          {active && topStamped && (
+          {topStamped ? (
             <span className="text-[10px] tracking-wider uppercase font-medium px-2 py-0.5 rounded border text-yellow-500/80 border-yellow-500/20 bg-yellow-500/5 animate-fadeIn">
               Paid — No Verification
             </span>
-          )}
-          {active && !topStamped && (
+          ) : (
             <span className="text-[10px] tracking-wider uppercase text-gray-600 font-medium px-2 py-0.5 rounded border border-zkeleton-border">
               Processing...
-            </span>
-          )}
-          {!active && (
-            <span className="text-[10px] tracking-wider uppercase text-gray-600 font-medium px-2 py-0.5 rounded border border-zkeleton-border">
-              Idle
             </span>
           )}
         </div>
@@ -696,42 +718,25 @@ export default function DualLanes({ active, paused, activePartners }: Props) {
             <h4 className="text-[9px] tracking-[0.2em] uppercase text-gray-600 mb-4">
               What the Insurer Sees
             </h4>
-            {active ? (
-              <div className="space-y-3">
-                {scenario.billing.map((row, i) => (
-                  <div key={i}>
-                    <div className="flex items-baseline justify-between">
-                      <span className="text-[9px] text-gray-600 uppercase tracking-wider">
-                        {row.label}
-                      </span>
-                      <span
-                        className={`text-xs font-mono font-medium ${
-                          row.label === "Amount" ? "text-white" : "text-gray-400"
-                        }`}
-                      >
-                        {row.value}
-                      </span>
-                    </div>
-                    <p className="text-[9px] text-gray-700 mt-0.5">{row.sub}</p>
+            <div className="space-y-3">
+              {topScenario.billing.map((row, i) => (
+                <div key={i}>
+                  <div className="flex items-baseline justify-between">
+                    <span className="text-[9px] text-gray-600 uppercase tracking-wider">
+                      {row.label}
+                    </span>
+                    <span
+                      className={`text-xs font-mono font-medium ${
+                        row.label === "Amount" ? "text-white" : "text-gray-400"
+                      }`}
+                    >
+                      {row.value}
+                    </span>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {[0, 1, 2, 3, 4].map((i) => (
-                  <div key={i} className="flex items-center justify-between">
-                    <div
-                      className="h-3 rounded bg-gray-800/60"
-                      style={{ width: `${30 + ((i * 13) % 25)}%` }}
-                    />
-                    <div
-                      className="h-3 rounded bg-gray-800/40"
-                      style={{ width: `${25 + ((i * 11) % 20)}%` }}
-                    />
-                  </div>
-                ))}
-              </div>
-            )}
+                  <p className="text-[9px] text-gray-700 mt-0.5">{row.sub}</p>
+                </div>
+              ))}
+            </div>
           </div>
 
           {/* Divider */}
@@ -783,7 +788,7 @@ export default function DualLanes({ active, paused, activePartners }: Props) {
           <span className="text-gray-600">
             Processed:{" "}
             <span className="text-gray-400 font-medium tabular-nums">
-              {processedCount}
+              {topProcessed}
             </span>
           </span>
           <span className="text-gray-600">
@@ -803,8 +808,8 @@ export default function DualLanes({ active, paused, activePartners }: Props) {
         </div>
       </div>
 
-      {/* Shared claim strip */}
-      {active && (
+      {/* Between lanes: claim strip when active, CTA when not */}
+      {active ? (
         <div className={`w-full max-w-[800px] flex items-center justify-center gap-3 -my-2 transition-all duration-700 ${
           transitioning ? "opacity-0" : "opacity-100"
         }`}>
@@ -814,6 +819,15 @@ export default function DualLanes({ active, paused, activePartners }: Props) {
           </span>
           <div className="h-px flex-1 bg-gradient-to-r from-transparent via-gray-700/50 to-transparent" />
         </div>
+      ) : (
+        <div className="w-full max-w-[800px] flex items-center justify-center -my-1">
+          <button
+            onClick={onActivate}
+            className="px-8 py-2.5 rounded-full font-medium text-xs tracking-wider uppercase transition-all duration-500 cursor-pointer bg-zkeleton-teal/10 text-zkeleton-teal border border-zkeleton-teal/25 hover:bg-zkeleton-teal/20 hover:shadow-[0_0_20px_rgba(45,212,170,0.15)] pulse-teal"
+          >
+            {"\u2197 Activate Bubble — See What\u2019s Hidden"}
+          </button>
+        </div>
       )}
 
       {/* ============ BOTTOM LANE: ZKELETON PRIVATE BUBBLE ============ */}
@@ -821,7 +835,7 @@ export default function DualLanes({ active, paused, activePartners }: Props) {
         {/* Floating partner icons — docked outside right edge */}
         {activePartners.size > 0 && (
           <div className={`absolute -right-10 top-1/2 -translate-y-1/2 flex flex-col gap-2.5 z-10 transition-all duration-700 ${
-            active && !transitioning ? "opacity-100 scale-100" : "opacity-0 scale-95"
+            active && !bottomTransitioning ? "opacity-100 scale-100" : "opacity-0 scale-95"
           }`}>
             {PARTNERS.filter((p) => activePartners.has(p.key)).map((p) => (
               <div
@@ -837,7 +851,7 @@ export default function DualLanes({ active, paused, activePartners }: Props) {
 
       <div
         className={`w-full rounded-lg overflow-hidden transition-all duration-700 ${
-          transitioning ? "opacity-0 scale-[0.98]" : "opacity-100 scale-100"
+          bottomTransitioning ? "opacity-0 scale-[0.98]" : "opacity-100 scale-100"
         } ${
           !active
             ? "border border-dashed border-zkeleton-border/40"

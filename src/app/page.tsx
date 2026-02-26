@@ -30,6 +30,7 @@ export default function Home() {
             active={bubbleActive}
             paused={paused}
             activePartners={activePartners}
+            onActivate={() => { setBubbleActive(true); setPaused(false); }}
           />
         </div>
 
