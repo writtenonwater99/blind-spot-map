@@ -820,7 +820,7 @@ export default function DualLanes({ active, paused, activePartners, onActivate, 
   const bottomTotalPaid = active
     ? topTotalPaid - bottomRecovered
     : 0;
-  const bottomTransitioning = transitioning;
+  const bottomTransitioning = transitioning && active;
   const projected = !!timeProjection && !fastForwarding;
 
   return (
