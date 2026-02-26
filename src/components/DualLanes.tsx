@@ -12,6 +12,10 @@ interface ClaimScenario {
   outcome: "verified" | "improper";
   finding: string;
   amount: string;
+  partnerFlip?: {
+    requires: PartnerKey;
+    finding: string;
+  };
 }
 
 type PartnerKey = "cgm" | "pharmacy" | "rpm" | "sdoh";
@@ -281,8 +285,8 @@ const SCENARIOS: ClaimScenario[] = [
     ],
     partnerData: {
       cgm: [
-        { label: "CGM", value: "Avg glucose: 178 mg/dL (14-day)" },
-        { label: "TIR", value: "Time in range: 42% (target >70%)" },
+        { label: "CGM", value: "\u26a0 CGM active 14 months continuously" },
+        { label: "Flag", value: "\u26a0 Lab panel duplicates CGM monitoring" },
       ],
       pharmacy: [
         { label: "Rx", value: "Metformin refill: 3 days late" },
@@ -296,6 +300,10 @@ const SCENARIOS: ClaimScenario[] = [
         { label: "Food", value: "Food desert zip code" },
         { label: "Dist", value: "Nearest pharmacy: 3.2 mi" },
       ],
+    },
+    partnerFlip: {
+      requires: "cgm",
+      finding: "Unnecessary service \u2014 patient\u2019s CGM provides continuous glucose data. Quarterly lab panel duplicates existing real-time monitoring. Overpayment: $890.",
     },
   },
   {
@@ -453,13 +461,17 @@ const SCENARIOS: ClaimScenario[] = [
         { label: "Adh", value: "Compliance tracked daily" },
       ],
       rpm: [
-        { label: "Vital", value: "Post-op vitals transmitted daily" },
-        { label: "Recov", value: "Activity resumed day 8, on track" },
+        { label: "Flag", value: "\u26a0 8,200 steps logged 48h post-op" },
+        { label: "Flag", value: "\u26a0 Recovery pattern inconsistent w/ CABG" },
       ],
       sdoh: [
         { label: "Care", value: "Spouse as primary caregiver" },
         { label: "Home", value: "Home modifications completed" },
       ],
+    },
+    partnerFlip: {
+      requires: "rpm",
+      finding: "Suspected fabricated documentation \u2014 RPM shows normal activity 48h post-CABG, inconsistent with surgical recovery. Overpayment: $15,200.",
     },
   },
 ];
@@ -474,6 +486,7 @@ const PROJECTIONS = {
     processed: 2_400_000,
     flagged: 312_000,
     recovered: 847_000_000,
+    partnerContribution: 235_000_000,
   },
   "12mo": {
     topProcessed: 4_800_000,
@@ -483,6 +496,7 @@ const PROJECTIONS = {
     processed: 4_800_000,
     flagged: 624_000,
     recovered: 1_700_000_000,
+    partnerContribution: 478_000_000,
   },
 };
 
@@ -535,6 +549,7 @@ export default function DualLanes({ active, paused, activePartners, onActivate, 
   const [revealedLines, setRevealedLines] = useState(0);
   const [revealedPartnerLines, setRevealedPartnerLines] = useState(0);
   const [showVerdict, setShowVerdict] = useState(false);
+  const [verdictFlipped, setVerdictFlipped] = useState(false);
   const [processedCount, setProcessedCount] = useState(0);
   const [bottomFlagged, setBottomFlagged] = useState(0);
   const [bottomRecovered, setBottomRecovered] = useState(0);
@@ -558,7 +573,8 @@ export default function DualLanes({ active, paused, activePartners, onActivate, 
 
   const topScenario = SCENARIOS[currentIndex % SCENARIOS.length];
   const scenario = topScenario;
-  const isImproper = scenario.outcome === "improper";
+  const isImproper = verdictFlipped || scenario.outcome === "improper";
+  const activeFinding = verdictFlipped && scenario.partnerFlip ? scenario.partnerFlip.finding : scenario.finding;
 
   const clearAllTimers = () => {
     if (masterTimerRef.current) clearTimeout(masterTimerRef.current);
@@ -597,19 +613,31 @@ export default function DualLanes({ active, paused, activePartners, onActivate, 
   const showVerdictThenAdvance = useCallback((sc: ClaimScenario, idx: number) => {
     setShowVerdict(true);
 
+    const hasFlip = sc.partnerFlip && activePartnersRef.current.has(sc.partnerFlip.requires);
+    const finalOutcome = hasFlip ? "improper" : sc.outcome;
+
     if (!projectionRef.current) {
       setProcessedCount((prev) => prev + 1);
-      if (sc.outcome === "improper") {
+      if (finalOutcome === "improper") {
         setBottomFlagged((prev) => prev + 1);
         const amt = parseFloat(sc.amount.replace(/[$,]/g, ""));
         setBottomRecovered((prev) => prev + amt);
       }
     }
 
-    // Hold verdict, then both lanes transition together
-    masterTimerRef.current = safeTimeout(() => {
-      advanceToNext(idx);
-    }, HOLD_TIME);
+    if (hasFlip) {
+      // Show "verified" first, then dramatic flip to "improper"
+      masterTimerRef.current = safeTimeout(() => {
+        setVerdictFlipped(true);
+        masterTimerRef.current = safeTimeout(() => {
+          advanceToNext(idx);
+        }, HOLD_TIME);
+      }, 1200);
+    } else {
+      masterTimerRef.current = safeTimeout(() => {
+        advanceToNext(idx);
+      }, HOLD_TIME);
+    }
   }, [safeTimeout, advanceToNext]);
 
   // Process a claim — handles both lanes
@@ -621,6 +649,7 @@ export default function DualLanes({ active, paused, activePartners, onActivate, 
     setRevealedLines(0);
     setRevealedPartnerLines(0);
     setShowVerdict(false);
+    setVerdictFlipped(false);
 
     // Top lane: stamp after delay
     stampRef.current = setTimeout(() => {
@@ -945,24 +974,31 @@ export default function DualLanes({ active, paused, activePartners, onActivate, 
 
       {/* Between lanes: delta callout when projected, claim strip when live, CTA when inactive */}
       {active && projected ? (
-        <div className="w-full max-w-[800px] flex items-center justify-center gap-4 -my-1 animate-fadeIn">
-          <div className="h-px flex-1 bg-gradient-to-r from-transparent via-zkeleton-teal/30 to-transparent" />
-          <div className="flex items-center gap-3 text-[10px] tracking-wider">
-            <span className="text-gray-500">
-              Current System:{" "}
-              <span className="text-yellow-500 font-medium">{fmtMoney(topRecovered)}</span>
-            </span>
-            <span className="text-gray-700">vs</span>
-            <span className="text-gray-500">
-              Zkeleton:{" "}
-              <span className="text-zkeleton-teal font-medium">{fmtMoney(bottomRecovered)}</span>
-            </span>
-            <span className="text-gray-700">|</span>
-            <span className="text-zkeleton-teal font-semibold">
-              {topRecovered > 0 ? `${Math.round(bottomRecovered / topRecovered)}x` : "—"} more recovered
-            </span>
+        <div className="w-full max-w-[800px] flex flex-col items-center gap-1 -my-1 animate-fadeIn">
+          <div className="flex items-center gap-4 w-full">
+            <div className="h-px flex-1 bg-gradient-to-r from-transparent via-zkeleton-teal/30 to-transparent" />
+            <div className="flex items-center gap-3 text-[10px] tracking-wider">
+              <span className="text-gray-500">
+                Current System:{" "}
+                <span className="text-yellow-500 font-medium">{fmtMoney(topRecovered)}</span>
+              </span>
+              <span className="text-gray-700">vs</span>
+              <span className="text-gray-500">
+                Zkeleton:{" "}
+                <span className="text-zkeleton-teal font-medium">{fmtMoney(bottomRecovered)}</span>
+              </span>
+              <span className="text-gray-700">|</span>
+              <span className="text-zkeleton-teal font-semibold">
+                {topRecovered > 0 ? `${Math.round(bottomRecovered / topRecovered)}x` : "\u2014"} more recovered
+              </span>
+            </div>
+            <div className="h-px flex-1 bg-gradient-to-r from-transparent via-zkeleton-teal/30 to-transparent" />
           </div>
-          <div className="h-px flex-1 bg-gradient-to-r from-transparent via-zkeleton-teal/30 to-transparent" />
+          {activePartners.size > 0 && timeProjection && (
+            <span className="text-[9px] text-gray-600 tracking-wider">
+              incl. <span className="text-zkeleton-teal/70 font-medium">{fmtMoney(PROJECTIONS[timeProjection].partnerContribution)}</span> from partner data
+            </span>
+          )}
         </div>
       ) : active ? (
         <div className={`w-full max-w-[800px] flex items-center justify-center gap-3 -my-2 transition-all duration-700 ${
@@ -1336,8 +1372,13 @@ export default function DualLanes({ active, paused, activePartners, onActivate, 
                           isImproper ? "text-red-400/50" : "text-green-400/50"
                         }`}
                       >
-                        {scenario.finding}
+                        {activeFinding}
                       </p>
+                      {verdictFlipped && (
+                        <p className="text-[9px] text-orange-400 mt-1.5 font-medium tracking-wider uppercase animate-fadeIn">
+                          {"\u26a0"} Partner data changed verdict
+                        </p>
+                      )}
                     </div>
                   )}
                 </div>
