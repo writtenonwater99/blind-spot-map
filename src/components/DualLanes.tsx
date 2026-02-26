@@ -875,9 +875,12 @@ export default function DualLanes({ active, paused, activePartners, onActivate, 
         <div className="flex">
           {/* Billing column */}
           <div className="w-1/2 p-5 bg-zkeleton-dark/80">
-            <h4 className="text-[9px] tracking-[0.2em] uppercase text-gray-600 mb-4">
-              What the Insurer Sees
-            </h4>
+            <div className="flex items-center justify-between mb-4">
+              <h4 className="text-[9px] tracking-[0.2em] uppercase text-gray-600">
+                What the Insurer Sees
+              </h4>
+              <span className="text-[7px] tracking-wider uppercase text-gray-700 border border-gray-800 rounded px-1.5 py-0.5">Claims / EDI</span>
+            </div>
             <div className="space-y-3">
               {topScenario.billing.map((row, i) => (
                 <div key={i}>
@@ -1154,9 +1157,12 @@ export default function DualLanes({ active, paused, activePartners, onActivate, 
             <div className="flex">
               {/* Billing column — identical to top */}
               <div className="w-1/2 p-5 bg-zkeleton-dark/80">
-                <h4 className="text-[9px] tracking-[0.2em] uppercase text-gray-600 mb-4">
-                  What the Insurer Sees
-                </h4>
+                <div className="flex items-center justify-between mb-4">
+                  <h4 className="text-[9px] tracking-[0.2em] uppercase text-gray-600">
+                    What the Insurer Sees
+                  </h4>
+                  <span className="text-[7px] tracking-wider uppercase text-zkeleton-teal/40 border border-zkeleton-teal/20 rounded px-1.5 py-0.5">FHIR R4</span>
+                </div>
                 <div className="space-y-3">
                   {scenario.billing.map((row, i) => (
                     <div key={i}>
@@ -1221,17 +1227,26 @@ export default function DualLanes({ active, paused, activePartners, onActivate, 
 
               {/* Clinical column — reveals */}
               <div className="w-1/2 p-5 bg-zkeleton-dark/60">
-                <h4
-                  className={`text-[9px] tracking-[0.2em] uppercase mb-4 transition-colors duration-500 ${
+                <div className="flex items-center justify-between mb-4">
+                  <h4
+                    className={`text-[9px] tracking-[0.2em] uppercase transition-colors duration-500 ${
+                      showVerdict && isImproper
+                        ? "text-red-400"
+                        : showVerdict
+                        ? "text-green-400"
+                        : "text-zkeleton-teal"
+                    }`}
+                  >
+                    What Actually Happened
+                  </h4>
+                  <span className={`text-[7px] tracking-wider uppercase rounded px-1.5 py-0.5 transition-colors duration-500 ${
                     showVerdict && isImproper
-                      ? "text-red-400"
+                      ? "text-red-400/40 border border-red-500/20"
                       : showVerdict
-                      ? "text-green-400"
-                      : "text-zkeleton-teal"
-                  }`}
-                >
-                  What Actually Happened
-                </h4>
+                      ? "text-green-400/40 border border-green-500/20"
+                      : "text-zkeleton-teal/40 border border-zkeleton-teal/20"
+                  }`}>FHIR R4</span>
+                </div>
                 <div className="space-y-2">
                   {scenario.clinical.map((line, i) => (
                     <div
@@ -1296,6 +1311,7 @@ export default function DualLanes({ active, paused, activePartners, onActivate, 
                             <span className="text-[8px] tracking-[0.2em] uppercase text-zkeleton-teal/70 font-medium">
                               {partner.short}: {partner.name}
                             </span>
+                            <span className="text-[6px] tracking-wider uppercase text-orange-400/50 border border-orange-400/20 rounded px-1 py-px ml-1">Partner API</span>
                           </div>
                           {lines.map((line, i) => (
                             <div
