@@ -9,8 +9,8 @@ interface InsightLine {
 
 const LINES: InsightLine[] = [
   {
-    text: "Claims data = what was billed. Clinical data = what actually happened.",
-    highlight: "The gap is where the money hides.",
+    text: "CMS-0057 forces the data in.",
+    highlight: "Zkeleton makes sure everything that happens next is on your terms.",
   },
   {
     text: "190M Americans exposed through shared infrastructure.",
@@ -29,8 +29,8 @@ const LINES: InsightLine[] = [
     highlight: "Full fidelity changes what AI can see.",
   },
   {
-    text: "Everyone else grades book reports.",
-    highlight: "Zkeleton gives you the book.",
+    text: "Not a compliance checkbox. Not a single-use tool.",
+    highlight: "The foundation that compounds.",
   },
 ];
 

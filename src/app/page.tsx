@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback } from "react";
 import Header from "@/components/Header";
-
+import BottomBar from "@/components/BottomBar";
 import DualLanes from "@/components/DualLanes";
 import StatsPanel from "@/components/StatsPanel";
 
@@ -70,6 +70,7 @@ export default function Home() {
           onResetProjection={onResetProjection}
         />
       </div>
+      <BottomBar />
     </div>
   );
 }

@@ -178,13 +178,37 @@ export default function StatsPanel({
               What&apos;s Happening
             </h3>
             <p className="text-[11px] text-gray-300 leading-relaxed">
-              Claims and clinical records matched in real-time inside the Private Bubble. Full fidelity.
+              Clinical data flowing into your isolated environment. Cross-referencing claims against medical records — one of many use cases the infrastructure enables.
             </p>
             {hasPartners && (
               <p className="text-[11px] text-zkeleton-teal leading-relaxed mt-2">
                 {activePartners.size} partner{activePartners.size > 1 ? "s" : ""} enriching every claim with additional data.
               </p>
             )}
+            <div className="mt-4 pt-3 border-t border-white/[0.04]">
+              <h4 className="text-[9px] text-gray-500 tracking-[0.15em] uppercase mb-2">
+                What the Environment Enables
+              </h4>
+              <div className="flex flex-wrap gap-1.5">
+                {[
+                  { label: "FWA Detection", lit: true },
+                  { label: "Risk Scoring", lit: true },
+                  { label: "Care Gap ID", lit: true },
+                  { label: "Partner Intelligence", lit: hasPartners },
+                ].map((uc) => (
+                  <span
+                    key={uc.label}
+                    className={`text-[9px] tracking-wider uppercase px-2 py-1 rounded transition-all duration-500 ${
+                      uc.lit
+                        ? "bg-zkeleton-teal/10 text-zkeleton-teal font-medium"
+                        : "bg-white/[0.03] text-gray-500"
+                    }`}
+                  >
+                    {uc.label}
+                  </span>
+                ))}
+              </div>
+            </div>
           </>
         ) : (
           <>
@@ -194,15 +218,15 @@ export default function StatsPanel({
             <div className="space-y-3">
               <Step
                 n="1"
-                text="Claims data sits in the insurer's system — billing codes, amounts, provider IDs."
+                text="CMS-0057 forces payers to receive clinical data by January 2027. Neither side volunteered."
               />
               <Step
                 n="2"
-                text="Clinical data sits in hospital EHRs — doctor's notes, labs, imaging, vitals."
+                text="Nobody built the receiving layer. When clinical data arrives — where does it go?"
               />
               <Step
                 n="3"
-                text="Today these never meet. 95% of claims are paid without anyone checking the chart."
+                text="Zkeleton is that infrastructure. Isolated. The payer controls it entirely."
               />
             </div>
           </>
@@ -301,7 +325,7 @@ export default function StatsPanel({
             Bubble Ecosystem
           </h3>
           <p className="text-[9px] text-gray-600 mb-4">
-            The insurer is the landlord. Partners are tenants.
+            Partners contribute data and receive intelligence back. You control who gets in, what they see, and what they get.
           </p>
 
           <div className="grid grid-cols-2 gap-2.5">
@@ -383,13 +407,13 @@ export default function StatsPanel({
             </div>
             <div className="space-y-1.5 pl-3">
               <p className="text-[10px] text-gray-300 leading-relaxed">
-                Clinical context they never had access to
+                Patient risk profiles for device targeting
               </p>
               <p className="text-[10px] text-gray-300 leading-relaxed">
                 Outcome correlation — does their product work?
               </p>
               <p className="text-[10px] text-gray-300 leading-relaxed">
-                Patient identification without buying data
+                Care gap alerts for proactive intervention
               </p>
             </div>
           </div>

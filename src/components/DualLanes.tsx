@@ -16,6 +16,8 @@ interface ClaimScenario {
     requires: PartnerKey;
     finding: string;
   };
+  useCaseOutputs: { riskScore: string; careGap: string };
+  partnerIntelligence: Partial<Record<PartnerKey, { label: string; insight: string }>>;
 }
 
 type PartnerKey = "cgm" | "pharmacy" | "rpm" | "sdoh";
@@ -98,6 +100,13 @@ const SCENARIOS: ClaimScenario[] = [
         { label: "Area", value: "Rural zip — limited specialist access" },
       ],
     },
+    useCaseOutputs: { riskScore: "HCC 85, score 1.42 → 1.81", careGap: "No echo in 14mo" },
+    partnerIntelligence: {
+      rpm: { label: "RPM", insight: "Post-discharge candidate, 30-day readmission risk 24%" },
+      cgm: { label: "CGM", insight: "Continuous SpO2 monitoring — titrate O2 therapy remotely" },
+      pharmacy: { label: "Rx", insight: "ACE inhibitor adherence 94% — maintain current regimen" },
+      sdoh: { label: "SDoH", insight: "Rural isolation + limited mobility — home health referral" },
+    },
   },
   {
     id: "#4,291,039",
@@ -146,6 +155,13 @@ const SCENARIOS: ClaimScenario[] = [
         { label: "Area", value: "Urban — high provider density" },
         { label: "Ins", value: "Low acuity area — urgent care in network" },
       ],
+    },
+    useCaseOutputs: { riskScore: "No severity — unaffected", careGap: "N/A" },
+    partnerIntelligence: {
+      cgm: { label: "CGM", insight: "Biometrics confirm low-acuity — corroborates upcoding flag" },
+      pharmacy: { label: "Rx", insight: "No Rx filled — supports billing discrepancy finding" },
+      rpm: { label: "RPM", insight: "Not enrolled — no monitoring data to reconcile" },
+      sdoh: { label: "SDoH", insight: "Urban, high access — no barriers explain billing level" },
     },
   },
   {
@@ -199,6 +215,13 @@ const SCENARIOS: ClaimScenario[] = [
         { label: "Rehab", value: "Cardiac rehab facility in network" },
       ],
     },
+    useCaseOutputs: { riskScore: "HCC 86, score 2.14 → 2.67", careGap: "Cardiac rehab 0/36 sessions" },
+    partnerIntelligence: {
+      cgm: { label: "CGM", insight: "AFib alert preceded ER arrival — early detection evidence" },
+      pharmacy: { label: "Rx", insight: "Dual antiplatelet + statin adherence tracking activated" },
+      rpm: { label: "RPM", insight: "Post-PCI vitals transmitting — 72h readmission risk 12%" },
+      sdoh: { label: "SDoH", insight: "Caregiver present, rehab accessible — discharge plan viable" },
+    },
   },
   {
     id: "#4,291,041",
@@ -247,6 +270,13 @@ const SCENARIOS: ClaimScenario[] = [
         { label: "Act", value: "Patient active in community" },
         { label: "Mob", value: "No mobility limitations on file" },
       ],
+    },
+    useCaseOutputs: { riskScore: "No encounter — unaffected", careGap: "N/A" },
+    partnerIntelligence: {
+      cgm: { label: "CGM", insight: "Normal activity on DOS — corroborates phantom billing" },
+      pharmacy: { label: "Rx", insight: "No surgical Rx — corroborates no procedure performed" },
+      rpm: { label: "RPM", insight: "Zero clinical telemetry on DOS — fraud corroboration" },
+      sdoh: { label: "SDoH", insight: "Active in community on DOS — patient was not in OR" },
     },
   },
   {
@@ -305,6 +335,13 @@ const SCENARIOS: ClaimScenario[] = [
       requires: "cgm",
       finding: "Unnecessary service \u2014 patient\u2019s CGM provides continuous glucose data. Quarterly lab panel duplicates existing real-time monitoring. Overpayment: $890.",
     },
+    useCaseOutputs: { riskScore: "HbA1c 8.2%, HCC 19", careGap: "Retinal exam overdue 18mo" },
+    partnerIntelligence: {
+      cgm: { label: "CGM", insight: "Glucose trending ↑ despite metformin — device intervention candidate" },
+      pharmacy: { label: "Rx", insight: "Metformin refill 3 days late — adherence intervention needed" },
+      rpm: { label: "RPM", insight: "4 glucose alerts >250 this week — escalation recommended" },
+      sdoh: { label: "SDoH", insight: "Food insecurity flagged — nutrition program referral" },
+    },
   },
   {
     id: "#4,291,043",
@@ -359,6 +396,13 @@ const SCENARIOS: ClaimScenario[] = [
         { label: "Area", value: "Standard outpatient access" },
         { label: "Note", value: "No barriers to care noted" },
       ],
+    },
+    useCaseOutputs: { riskScore: "K21.0, score 0.31 — low tier", careGap: "N/A" },
+    partnerIntelligence: {
+      cgm: { label: "CGM", insight: "Single biometric event — confirms duplicate claim" },
+      pharmacy: { label: "Rx", insight: "Single sedation dose — one procedure, billed twice" },
+      rpm: { label: "RPM", insight: "One recovery window — no second procedure detected" },
+      sdoh: { label: "SDoH", insight: "No access barriers — duplicate is billing error, not care issue" },
     },
   },
   {
@@ -415,6 +459,13 @@ const SCENARIOS: ClaimScenario[] = [
         { label: "Tech", value: "Telehealth capable, broadband OK" },
         { label: "Flag", value: "\u26a0 Could have been virtual visit" },
       ],
+    },
+    useCaseOutputs: { riskScore: "F33.1, HCC 59 — moderate", careGap: "No PHQ-9 in 6mo" },
+    partnerIntelligence: {
+      cgm: { label: "CGM", insight: "No stress response during visit — supports short encounter" },
+      pharmacy: { label: "Rx", insight: "Sertraline auto-refill stable — no med change ordered" },
+      rpm: { label: "RPM", insight: "Mood tracker stable 90d — no crisis, med check appropriate" },
+      sdoh: { label: "SDoH", insight: "Telehealth capable — virtual visit could reduce cost" },
     },
   },
   {
@@ -473,6 +524,13 @@ const SCENARIOS: ClaimScenario[] = [
       requires: "rpm",
       finding: "Suspected fabricated documentation \u2014 RPM shows normal activity 48h post-CABG, inconsistent with surgical recovery. Overpayment: $15,200.",
     },
+    useCaseOutputs: { riskScore: "HCC 86+88, score 2.67, highest tier", careGap: "Cardiac rehab 0/36 sessions" },
+    partnerIntelligence: {
+      cgm: { label: "CGM", insight: "Pre/post-op HR trajectory — surgical outcome benchmarking" },
+      pharmacy: { label: "Rx", insight: "Warfarin + metoprolol adherence tracking activated" },
+      rpm: { label: "RPM", insight: "Activity inconsistent w/ CABG recovery — documentation review" },
+      sdoh: { label: "SDoH", insight: "Home mods complete, caregiver present — discharge viable" },
+    },
   },
 ];
 
@@ -487,6 +545,9 @@ const PROJECTIONS = {
     flagged: 312_000,
     recovered: 847_000_000,
     partnerContribution: 235_000_000,
+    riskScores: 2_400_000,
+    careGaps: 1_680_000,
+    profilesShared: 960_000,
   },
   "12mo": {
     topProcessed: 4_800_000,
@@ -497,6 +558,9 @@ const PROJECTIONS = {
     flagged: 624_000,
     recovered: 1_700_000_000,
     partnerContribution: 478_000_000,
+    riskScores: 4_800_000,
+    careGaps: 3_360_000,
+    profilesShared: 1_920_000,
   },
 };
 
@@ -517,8 +581,11 @@ const REVEAL_DELAY = 1100;
 const STAMP_DELAY = 1500;
 const VERDICT_DELAY = 800;
 const HOLD_TIME = 3000;
+const HOLD_TIME_EXTENDED = 3500;
 const FADE_TIME = 1200;
 const GAP_TIME = 400;
+const USE_CASE_DELAY = 800;
+const INTEL_DELAY = 600;
 
 interface Props {
   active: boolean;
@@ -553,6 +620,11 @@ export default function DualLanes({ active, paused, activePartners, onActivate, 
   const [processedCount, setProcessedCount] = useState(0);
   const [bottomFlagged, setBottomFlagged] = useState(0);
   const [bottomRecovered, setBottomRecovered] = useState(0);
+  const [showUseCaseOutputs, setShowUseCaseOutputs] = useState(false);
+  const [showPartnerIntelligence, setShowPartnerIntelligence] = useState(false);
+  const [riskScoresCount, setRiskScoresCount] = useState(0);
+  const [careGapsCount, setCareGapsCount] = useState(0);
+  const [profilesSharedCount, setProfilesSharedCount] = useState(0);
 
   // Refs
   const masterTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -560,6 +632,8 @@ export default function DualLanes({ active, paused, activePartners, onActivate, 
   const revealRef = useRef<NodeJS.Timeout | null>(null);
   const partnerRevealRef = useRef<NodeJS.Timeout | null>(null);
   const pauseWaitRef = useRef<NodeJS.Timeout | null>(null);
+  const useCaseTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const intelTimerRef = useRef<NodeJS.Timeout | null>(null);
   const activePartnersRef = useRef(activePartners);
   activePartnersRef.current = activePartners;
   const pausedRef = useRef(paused);
@@ -582,6 +656,8 @@ export default function DualLanes({ active, paused, activePartners, onActivate, 
     if (revealRef.current) clearInterval(revealRef.current);
     if (partnerRevealRef.current) clearInterval(partnerRevealRef.current);
     if (pauseWaitRef.current) clearInterval(pauseWaitRef.current);
+    if (useCaseTimerRef.current) clearTimeout(useCaseTimerRef.current);
+    if (intelTimerRef.current) clearTimeout(intelTimerRef.current);
   };
 
   // Timeout that waits if paused, then executes
@@ -609,15 +685,23 @@ export default function DualLanes({ active, paused, activePartners, onActivate, 
     }, fadeDur);
   }, []);
 
-  // Bottom lane verdict, then hold, then advance
+  // Bottom lane verdict, then use case outputs, then partner intel, then advance
   const showVerdictThenAdvance = useCallback((sc: ClaimScenario, idx: number) => {
     setShowVerdict(true);
 
     const hasFlip = sc.partnerFlip && activePartnersRef.current.has(sc.partnerFlip.requires);
     const finalOutcome = hasFlip ? "improper" : sc.outcome;
+    const hasActivePartners = activePartnersRef.current.size > 0;
 
     if (!projectionRef.current) {
       setProcessedCount((prev) => prev + 1);
+      setRiskScoresCount((prev) => prev + 1);
+      if (sc.useCaseOutputs.careGap !== "N/A") {
+        setCareGapsCount((prev) => prev + 1);
+      }
+      if (hasActivePartners) {
+        setProfilesSharedCount((prev) => prev + activePartnersRef.current.size);
+      }
       if (finalOutcome === "improper") {
         setBottomFlagged((prev) => prev + 1);
         const amt = parseFloat(sc.amount.replace(/[$,]/g, ""));
@@ -625,18 +709,34 @@ export default function DualLanes({ active, paused, activePartners, onActivate, 
       }
     }
 
+    // After verdict: show use case outputs, then partner intel, then hold
+    const showUseCaseThenAdvance = () => {
+      useCaseTimerRef.current = safeTimeout(() => {
+        setShowUseCaseOutputs(true);
+
+        if (hasActivePartners) {
+          intelTimerRef.current = safeTimeout(() => {
+            setShowPartnerIntelligence(true);
+            masterTimerRef.current = safeTimeout(() => {
+              advanceToNext(idx);
+            }, HOLD_TIME_EXTENDED);
+          }, INTEL_DELAY);
+        } else {
+          masterTimerRef.current = safeTimeout(() => {
+            advanceToNext(idx);
+          }, HOLD_TIME_EXTENDED);
+        }
+      }, USE_CASE_DELAY);
+    };
+
     if (hasFlip) {
       // Show "verified" first, then dramatic flip to "improper"
       masterTimerRef.current = safeTimeout(() => {
         setVerdictFlipped(true);
-        masterTimerRef.current = safeTimeout(() => {
-          advanceToNext(idx);
-        }, HOLD_TIME);
+        showUseCaseThenAdvance();
       }, 1200);
     } else {
-      masterTimerRef.current = safeTimeout(() => {
-        advanceToNext(idx);
-      }, HOLD_TIME);
+      showUseCaseThenAdvance();
     }
   }, [safeTimeout, advanceToNext]);
 
@@ -650,6 +750,8 @@ export default function DualLanes({ active, paused, activePartners, onActivate, 
     setRevealedPartnerLines(0);
     setShowVerdict(false);
     setVerdictFlipped(false);
+    setShowUseCaseOutputs(false);
+    setShowPartnerIntelligence(false);
 
     // Top lane: stamp after delay
     stampRef.current = setTimeout(() => {
@@ -717,10 +819,15 @@ export default function DualLanes({ active, paused, activePartners, onActivate, 
         setProcessedCount(0);
         setBottomFlagged(0);
         setBottomRecovered(0);
+        setRiskScoresCount(0);
+        setCareGapsCount(0);
+        setProfilesSharedCount(0);
       } else {
         setShowVerdict(false);
         setRevealedLines(0);
         setRevealedPartnerLines(0);
+        setShowUseCaseOutputs(false);
+        setShowPartnerIntelligence(false);
       }
       // Restart current claim with new mode
       processClaim(currentIndex);
@@ -742,6 +849,9 @@ export default function DualLanes({ active, paused, activePartners, onActivate, 
         topPaid: topTotalPaid,
         topFlagged: topFlagged,
         topRecovered: topRecovered,
+        riskScores: riskScoresCount,
+        careGaps: careGapsCount,
+        profilesShared: profilesSharedCount,
       };
       const startTime = Date.now();
       const duration = 3000;
@@ -749,7 +859,7 @@ export default function DualLanes({ active, paused, activePartners, onActivate, 
       // Clear normal timers
       clearAllTimers();
 
-      // Rapid claim flip loop
+      // Rapid claim flip loop — suppress use case outputs
       let flipIndex = currentIndex;
       ffIntervalRef.current = setInterval(() => {
         setTransitioning(true);
@@ -759,6 +869,8 @@ export default function DualLanes({ active, paused, activePartners, onActivate, 
           setRevealedLines(SCENARIOS[flipIndex].clinical.length);
           setRevealedPartnerLines(20);
           setShowVerdict(true);
+          setShowUseCaseOutputs(false);
+          setShowPartnerIntelligence(false);
           setTopStamped(true);
           setTransitioning(false);
         }, 80);
@@ -777,6 +889,9 @@ export default function DualLanes({ active, paused, activePartners, onActivate, 
         setTopTotalPaid(Math.round(startVals.topPaid + (target.topPaid - startVals.topPaid) * eased));
         setTopFlagged(Math.round(startVals.topFlagged + (target.topFlagged - startVals.topFlagged) * eased));
         setTopRecovered(Math.round(startVals.topRecovered + (target.topRecovered - startVals.topRecovered) * eased));
+        setRiskScoresCount(Math.round(startVals.riskScores + (target.riskScores - startVals.riskScores) * eased));
+        setCareGapsCount(Math.round(startVals.careGaps + (target.careGaps - startVals.careGaps) * eased));
+        setProfilesSharedCount(Math.round(startVals.profilesShared + (target.profilesShared - startVals.profilesShared) * eased));
 
         if (p < 1) ffRafRef.current = requestAnimationFrame(animateCounters);
       };
@@ -810,6 +925,9 @@ export default function DualLanes({ active, paused, activePartners, onActivate, 
       setTopTotalPaid(0);
       setTopFlagged(0);
       setTopRecovered(0);
+      setRiskScoresCount(0);
+      setCareGapsCount(0);
+      setProfilesSharedCount(0);
       clearAllTimers();
       processClaim(currentIndex);
     }
@@ -817,9 +935,6 @@ export default function DualLanes({ active, paused, activePartners, onActivate, 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timeProjection]);
 
-  const bottomTotalPaid = active
-    ? topTotalPaid - bottomRecovered
-    : 0;
   const bottomTransitioning = transitioning && active;
   const projected = !!timeProjection && !fastForwarding;
 
@@ -828,6 +943,12 @@ export default function DualLanes({ active, paused, activePartners, onActivate, 
       {/* Sampling indicator */}
       <div className={`flex items-center gap-3 text-[10px] transition-opacity duration-500 ${paused ? "opacity-50" : "opacity-100"}`}>
         <span className="text-gray-600">
+          {!active && (
+            <>
+              <span className="text-gray-500">CMS-0057 mandates this data by Jan 2027</span>
+              {" · "}
+            </>
+          )}
           Sampling from{" "}
           <span className="text-gray-400 font-medium tabular-nums">47.2M</span>{" "}
           Medicaid claims
@@ -1019,7 +1140,7 @@ export default function DualLanes({ active, paused, activePartners, onActivate, 
             onClick={onActivate}
             className="px-8 py-2.5 rounded-full font-medium text-xs tracking-wider uppercase transition-all duration-500 cursor-pointer bg-zkeleton-teal/10 text-zkeleton-teal hover:bg-zkeleton-teal/20 pulse-teal"
           >
-            {"\u2197 Activate Bubble — See What\u2019s Hidden"}
+            {"\u2197 Activate Bubble — See What Happens on Your Terms"}
           </button>
         </div>
       )}
@@ -1397,13 +1518,58 @@ export default function DualLanes({ active, paused, activePartners, onActivate, 
                       )}
                     </div>
                   )}
+
+                  {/* Use case outputs — risk score + care gap */}
+                  {showVerdict && showUseCaseOutputs && (
+                    <div className="mt-3 pt-2.5 border-t border-white/[0.04] animate-fadeIn opacity-60">
+                      <div className="flex items-start gap-2 mb-1.5">
+                        <span className="text-[8px] tracking-wider uppercase font-medium px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 shrink-0">
+                          Risk
+                        </span>
+                        <span className="text-[9px] text-gray-400 font-mono leading-relaxed">
+                          {scenario.useCaseOutputs.riskScore}
+                        </span>
+                      </div>
+                      {scenario.useCaseOutputs.careGap !== "N/A" && (
+                        <div className="flex items-start gap-2">
+                          <span className="text-[8px] tracking-wider uppercase font-medium px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 shrink-0">
+                            Gap
+                          </span>
+                          <span className="text-[9px] text-gray-400 font-mono leading-relaxed">
+                            {scenario.useCaseOutputs.careGap}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Partner intelligence flowing OUT */}
+                  {showVerdict && showPartnerIntelligence && activePartners.size > 0 && (
+                    <div className="mt-2.5 pt-2 border-t border-white/[0.04] animate-fadeIn opacity-60">
+                      {PARTNERS.filter(
+                        (p) => activePartners.has(p.key) && scenario.partnerIntelligence[p.key]
+                      ).map((partner) => {
+                        const intel = scenario.partnerIntelligence[partner.key]!;
+                        return (
+                          <div key={partner.key} className="flex items-start gap-2 mb-1.5">
+                            <span className="text-[8px] tracking-wider uppercase font-medium px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400 shrink-0">
+                              → {intel.label}
+                            </span>
+                            <span className="text-[9px] text-gray-400 font-mono leading-relaxed">
+                              {intel.insight}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
 
             {/* Lane footer tally */}
             <div
-              className={`px-5 border-t flex items-center gap-6 text-[10px] transition-all duration-500 ${
+              className={`px-5 border-t flex items-center flex-wrap gap-x-5 gap-y-1 text-[10px] transition-all duration-500 ${
                 projected ? "py-3" : "py-2.5"
               } ${
                 showVerdict && isImproper
@@ -1420,26 +1586,31 @@ export default function DualLanes({ active, paused, activePartners, onActivate, 
                 </span>
               </span>
               <span className="text-gray-600">
-                Verified:{" "}
-                <span className="text-green-400/80 font-medium tabular-nums">
-                  {fmtMoney(bottomTotalPaid)}
-                </span>
-              </span>
-              <span className="text-gray-600">
                 Flagged:{" "}
                 <span className="text-red-400 font-medium tabular-nums">
                   {fmtCount(bottomFlagged)}
                 </span>
               </span>
-              <span className="text-gray-600 relative group">
-                Exposed:{" "}
-                <span className={`font-medium tabular-nums transition-all duration-500 ${projected ? "text-sm text-zkeleton-teal" : "text-zkeleton-teal"}`}>
-                  {fmtMoney(bottomRecovered)}
-                </span>
-                <span className="tooltip absolute bottom-full left-0 mb-2 px-3 py-2 rounded bg-zkeleton-panel text-[9px] text-gray-400 leading-relaxed w-56 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-20 shadow-lg">
-                  Surfaced from single-dataset identity matching (Middesk, 2026). Clinical layer untouched.
+              <span className="text-gray-600">
+                Risk Scores:{" "}
+                <span className="text-blue-400 font-medium tabular-nums">
+                  {fmtCount(riskScoresCount)}
                 </span>
               </span>
+              <span className="text-gray-600">
+                Care Gaps:{" "}
+                <span className="text-amber-400 font-medium tabular-nums">
+                  {fmtCount(careGapsCount)}
+                </span>
+              </span>
+              {activePartners.size > 0 && (
+                <span className="text-gray-600">
+                  Profiles Shared:{" "}
+                  <span className="text-purple-400 font-medium tabular-nums">
+                    {fmtCount(profilesSharedCount)}
+                  </span>
+                </span>
+              )}
             </div>
           </>
         )}
